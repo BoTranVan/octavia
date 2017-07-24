@@ -18,6 +18,8 @@ from wsmeext import pecan as wsme_pecan
 from octavia.api.v2.controllers import amphora
 from octavia.api.v2.controllers import base
 from octavia.api.v2.controllers import clusterquotas
+from octavia.api.v2.controllers import flavor_profiles
+from octavia.api.v2.controllers import flavors
 from octavia.api.v2.controllers import health_monitor
 from octavia.api.v2.controllers import l7policy
 from octavia.api.v2.controllers import listener
@@ -47,6 +49,8 @@ class BaseV2Controller(base.BaseController):
         self.providers = provider.ProviderController()
         self.usage = usage.UsageController()
         self.clusterquotas = clusterquotas.ClusterQuotasController()
+        self.flavors = flavors.FlavorsController()
+        self.flavorprofiles = flavor_profiles.FlavorProfileController()
 
     @wsme_pecan.wsexpose(wtypes.text)
     def get(self):

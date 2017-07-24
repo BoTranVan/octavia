@@ -188,6 +188,8 @@ class Repositories(object):
         self.amp_build_req = AmphoraBuildReqRepository()
         self.quotas = QuotasRepository()
         self.clusterquotas = ClusterQuotasRepository()
+        self.flavor = FlavorRepository()
+        self.flavor_profile = FlavorProfileRepository()
 
     def create_load_balancer_and_vip(self, session, lb_dict, vip_dict):
         """Inserts load balancer and vip entities into the database.
@@ -2033,3 +2035,11 @@ class ClusterQuotasRepository(BaseRepository):
                 clusterquotas.max_l7policies_per_listener = None
                 clusterquotas.max_l7rules_per_l7policy = None
                 session.flush()
+
+
+class FlavorRepository(BaseRepository):
+    model_class = models.Flavor
+
+
+class FlavorProfileRepository(BaseRepository):
+    model_class = models.FlavorProfile

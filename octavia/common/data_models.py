@@ -754,3 +754,25 @@ class ClusterQuotas(BaseDataModel):
         self.max_pools_per_loadbalancer = max_pools_per_loadbalancer
         self.max_l7policies_per_listener = max_l7policies_per_listener
         self.max_l7rules_per_l7policy = max_l7rules_per_l7policy
+
+
+class Flavor(BaseDataModel):
+
+    def __init__(self, id=None, name=None,
+                 description=None, enabled=None,
+                 flavor_profile_id=None):
+        self.id = id
+        self.name = name
+        self.description = description
+        self.enabled = enabled
+        self.flavor_profile_id = flavor_profile_id
+
+
+class FlavorProfile(BaseDataModel):
+
+    def __init__(self, id=None, name=None, provider_name=None,
+                 flavor_data=None):
+        self.id = id
+        self.name = name
+        self.provider_name = provider_name
+        self.flavor_data = flavor_data

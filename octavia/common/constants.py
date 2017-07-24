@@ -540,6 +540,8 @@ RBAC_CLUSTERQUOTA = '{}:clusterquota:'.format(LOADBALANCER_API)
 RBAC_USAGE = '{}:usage:'.format(LOADBALANCER_API)
 RBAC_AMPHORA = '{}:amphora:'.format(LOADBALANCER_API)
 RBAC_PROVIDER = '{}:provider:'.format(LOADBALANCER_API)
+RBAC_FLAVOR = '{}:flavor:'.format(LOADBALANCER_API)
+RBAC_FLAVOR_PROFILE = '{}:flavor-profile:'.format(LOADBALANCER_API)
 RBAC_POST = 'post'
 RBAC_PUT = 'put'
 RBAC_PUT_FAILOVER = 'put_failover'
@@ -565,3 +567,8 @@ ENABLE = 'enable'
 
 # systemd amphora netns service prefix
 AMP_NETNS_SVC_PREFIX = 'amphora-netns'
+
+# Amphora Feature Compatibility
+HTTP_REUSE = 'has_http_reuse'
+
+FLAVOR_DATA = 'flavor_data'
