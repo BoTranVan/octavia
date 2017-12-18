@@ -202,6 +202,7 @@ class Repositories(object):
         self.clusterquotas = ClusterQuotasRepository()
         self.flavor = FlavorRepository()
         self.flavor_profile = FlavorProfileRepository()
+        self.distributor = DistributorRepository()
 
     def create_load_balancer_and_vip(self, session, lb_dict, vip_dict):
         """Inserts load balancer and vip entities into the database.
@@ -2076,3 +2077,7 @@ class FlavorRepository(BaseRepository):
 
 class FlavorProfileRepository(BaseRepository):
     model_class = models.FlavorProfile
+
+
+class DistributorRepository(BaseRepository):
+    model_class = models.Distributor

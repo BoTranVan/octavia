@@ -55,6 +55,7 @@ class LoadBalancerResponse(BaseLoadBalancerType):
     flavor_id = wtypes.wsattr(wtypes.UuidType())
     vip_qos_policy_id = wtypes.wsattr(wtypes.UuidType())
     tags = wtypes.wsattr(wtypes.ArrayType(wtypes.StringType()))
+    distributor = wtypes.wsattr(wtypes.UuidType())
 
     @classmethod
     def from_data_model(cls, data_model, children=False):

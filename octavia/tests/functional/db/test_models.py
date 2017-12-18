@@ -29,7 +29,10 @@ class ModelTestMixin(object):
     FAKE_IP = '10.0.0.1'
     FAKE_UUID_1 = uuidutils.generate_uuid()
     FAKE_UUID_2 = uuidutils.generate_uuid()
+    FAKE_UUID_3 = uuidutils.generate_uuid()
+    FAKE_UUID_4 = uuidutils.generate_uuid()
     FAKE_AZ = 'zone1'
+    FAKE_DRIVER = 'dist-driver'
 
     def _insert(self, session, model_cls, model_kwargs):
         with session.begin():
@@ -191,6 +194,19 @@ class ModelTestMixin(object):
                   'enabled': True}
         kwargs.update(overrides)
         return self._insert(session, models.L7Rule, kwargs)
+
+    def create_distributor(self, session, **overrides):
+        kwargs = {'id': self.FAKE_UUID_3,
+                  'name': 'fake_distributor',
+                  'description': 'fake distributor',
+                  'distributor_driver': self.FAKE_DRIVER,
+                  'frontend_subnet': self.FAKE_UUID_4,
+                  'enabled': True,
+                  'provisioning_status': constants.ACTIVE,
+                  'operating_status': constants.ONLINE,
+                  'config_data': '{}'}
+        kwargs.update(overrides)
+        return self._insert(session, models.Distributor, kwargs)
 
 
 class PoolModelTest(base.OctaviaDBTestBase, ModelTestMixin):
@@ -568,6 +584,21 @@ class LoadBalancerModelTest(base.OctaviaDBTestBase, ModelTestMixin):
         self.assertIsNotNone(new_load_balancer.vip)
         self.assertIsInstance(new_load_balancer.vip, models.Vip)
 
+    def test_distributor_relationship(self):
+        distributor = self.create_distributor(self.session)
+        load_balancer = self.create_load_balancer(
+            self.session, distributor_id=distributor.id)
+        new_load_balancer = self.session.query(
+            models.LoadBalancer).filter_by(id=load_balancer.id).first()
+        self.assertIsNotNone(new_load_balancer.distributor)
+        self.assertIsInstance(new_load_balancer.distributor,
+                              models.Distributor)
+        # Test the back reference with two load balancers on a distributor
+        load_balancer = self.create_load_balancer(
+            self.session, id=self.FAKE_UUID_2, distributor_id=distributor.id)
+        self.assertIsNotNone(new_load_balancer.distributor.load_balancers)
+        self.assertEqual(2, len(new_load_balancer.distributor.load_balancers))
+
 
 class VipModelTest(base.OctaviaDBTestBase, ModelTestMixin):
 
@@ -864,11 +895,41 @@ class L7RuleModelTest(base.OctaviaDBTestBase, ModelTestMixin):
         self.assertIsInstance(new_l7rule.l7policy, models.L7Policy)
 
 
+class DistributorModelTest(base.OctaviaDBTestBase, ModelTestMixin):
+
+    def setUp(self):
+        super(DistributorModelTest, self).setUp()
+
+    def test_create(self):
+        self.create_distributor(self.session)
+
+    def test_update(self):
+        distributor = self.create_distributor(self.session)
+        id = distributor.id
+        distributor.operational_status = constants.OFFLINE
+
+        new_distributor = self.session.query(models.Distributor).filter_by(
+            id=id).first()
+        self.assertEqual(new_distributor.operational_status,
+                         constants.OFFLINE)
+
+    def test_delete(self):
+        distributor = self.create_distributor(self.session)
+        with self.session.begin():
+            self.session.delete(distributor)
+            self.session.flush()
+        new_distributor = self.session.query(
+            models.Distributor).filter_by(id=distributor.id).first()
+        self.assertIsNone(new_distributor)
+
+
 class TestDataModelConversionTest(base.OctaviaDBTestBase, ModelTestMixin):
 
     def setUp(self):
         super(TestDataModelConversionTest, self).setUp()
-        self.lb = self.create_load_balancer(self.session)
+        self.distributor = self.create_distributor(self.session)
+        self.lb = self.create_load_balancer(self.session,
+                                            distributor_id=self.distributor.id)
         self.amphora = self.create_amphora(self.session)
         self.associate_amphora(self.lb, self.amphora)
         self.amphora_health = self.create_amphora_health(self.session)
@@ -900,7 +961,7 @@ class TestDataModelConversionTest(base.OctaviaDBTestBase, ModelTestMixin):
         # objects.
         if obj.__class__.__name__ in ['Member', 'Pool', 'LoadBalancer',
                                       'Listener', 'Amphora', 'L7Policy',
-                                      'L7Rule']:
+                                      'L7Rule', 'Distributor']:
             return obj.__class__.__name__ + obj.id
         elif obj.__class__.__name__ in ['SessionPersistence', 'HealthMonitor']:
             return obj.__class__.__name__ + obj.pool_id
@@ -971,6 +1032,8 @@ class TestDataModelConversionTest(base.OctaviaDBTestBase, ModelTestMixin):
                          self.l7policy.to_data_model()._get_unique_key())
         self.assertEqual(self._get_unique_key(self.l7rule),
                          self.l7rule.to_data_model()._get_unique_key())
+        self.assertEqual(self._get_unique_key(self.distributor),
+                         self.distributor.to_data_model()._get_unique_key())
 
     def test_graph_completeness(self):
         # Generate equivalent graphs starting arbitrarily from different
@@ -1083,6 +1146,11 @@ class TestDataModelConversionTest(base.OctaviaDBTestBase, ModelTestMixin):
         l7rule_db = self.session.query(models.L7Rule).filter_by(
             id=self.l7rule.id).first()
         self.check_l7rule(l7rule_db.to_data_model())
+
+    def test_distributor_tree(self):
+        distributor_db = self.session.query(models.Distributor).filter_by(
+            id=self.distributor.id).first()
+        self.check_distributor(distributor_db.to_data_model())
 
     def check_load_balancer(self, lb, check_listeners=True,
                             check_amphorae=True, check_vip=True,
@@ -1229,6 +1297,17 @@ class TestDataModelConversionTest(base.OctaviaDBTestBase, ModelTestMixin):
                                     check_listener=check_listeners,
                                     check_lb=check_lb)
 
+    def check_distributor(self, distributor, check_lbs=True):
+        self.assertIsInstance(distributor, data_models.Distributor)
+        self.check_distributor_data_model(distributor)
+        if check_lbs:
+            lbs = distributor.load_balancers
+            self.assertIsInstance(lbs, list)
+            for lb in lbs:
+                self.check_load_balancer(lb, check_listeners=False,
+                                         check_amphorae=False,
+                                         check_vip=False, check_pools=False)
+
     def check_load_balancer_data_model(self, lb):
         self.assertEqual(self.FAKE_UUID_1, lb.project_id)
         self.assertEqual(self.FAKE_UUID_1, lb.id)
@@ -1314,12 +1393,22 @@ class TestDataModelConversionTest(base.OctaviaDBTestBase, ModelTestMixin):
         self.assertEqual(self.FAKE_UUID_1, amphora.amphora_id)
         self.assertEqual(self.FAKE_UUID_1, amphora.load_balancer_id)
 
+    def check_distributor_data_model(self, distributor):
+        self.assertEqual(self.FAKE_UUID_3, distributor.id)
+        self.assertEqual(self.FAKE_UUID_4, distributor.frontend_subnet)
+        self.assertEqual(self.FAKE_DRIVER, distributor.distributor_driver)
+        self.assertTrue(distributor.enabled)
+        self.assertEqual(constants.ACTIVE, distributor.provisioning_status)
+        self.assertEqual(constants.ONLINE, distributor.operating_status)
+
 
 class TestDataModelManipulations(base.OctaviaDBTestBase, ModelTestMixin):
 
     def setUp(self):
         super(TestDataModelManipulations, self).setUp()
-        self.lb = self.create_load_balancer(self.session)
+        self.distributor = self.create_distributor(self.session)
+        self.lb = self.create_load_balancer(
+            self.session, distributor_id=self.distributor.id)
         self.amphora = self.create_amphora(self.session)
         self.associate_amphora(self.lb, self.amphora)
         # This pool will be the listener's default_pool and be referenced
@@ -1732,6 +1821,12 @@ class TestDataModelManipulations(base.OctaviaDBTestBase, ModelTestMixin):
         self.assertEqual(l7p.redirect_pool, new_pool)
         self.assertIn(new_pool, listener.pools)
         self.assertIn(listener, new_pool.listeners)
+
+    def test_dm_distributor_simple_update(self):
+        distributor = self.distributor.to_data_model()
+        self.assertTrue(distributor.enabled)
+        distributor.update({'enabled': False})
+        self.assertFalse(distributor.enabled)
 
 
 class FlavorModelTest(base.OctaviaDBTestBase, ModelTestMixin):

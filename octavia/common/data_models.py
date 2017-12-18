@@ -92,7 +92,7 @@ class BaseDataModel(object):
         # objects.
         if obj.__class__.__name__ in ['Member', 'Pool', 'LoadBalancer',
                                       'Listener', 'Amphora', 'L7Policy',
-                                      'L7Rule']:
+                                      'L7Rule', 'Distributor']:
             return obj.__class__.__name__ + obj.id
         elif obj.__class__.__name__ in ['SessionPersistence', 'HealthMonitor']:
             return obj.__class__.__name__ + obj.pool_id
@@ -436,7 +436,7 @@ class LoadBalancer(BaseDataModel):
                  topology=None, vip=None, listeners=None, amphorae=None,
                  pools=None, vrrp_group=None, server_group_id=None,
                  created_at=None, updated_at=None, provider=None, tags=None,
-                 flavor_id=None):
+                 flavor_id=None, distributor_id=None):
 
         self.id = id
         self.project_id = project_id
@@ -457,6 +457,7 @@ class LoadBalancer(BaseDataModel):
         self.provider = provider
         self.tags = tags or []
         self.flavor_id = flavor_id
+        self.distributor_id = distributor_id
 
     def update(self, update_dict):
         for key, value in update_dict.items():
@@ -529,7 +530,9 @@ class Amphora(BaseDataModel):
                  load_balancer=None, role=None, cert_expiration=None,
                  cert_busy=False, vrrp_interface=None, vrrp_id=None,
                  vrrp_priority=None, cached_zone=None, created_at=None,
-                 updated_at=None, image_id=None, compute_flavor=None):
+                 updated_at=None, image_id=None, compute_flavor=None,
+                 frontend_ip=None, frontend_port_id=None,
+                 frontend_interface=None):
         self.id = id
         self.load_balancer_id = load_balancer_id
         self.compute_id = compute_id
@@ -551,6 +554,9 @@ class Amphora(BaseDataModel):
         self.updated_at = updated_at
         self.image_id = image_id
         self.compute_flavor = compute_flavor
+        self.frontend_ip = frontend_ip
+        self.frontend_port_id = frontend_port_id
+        self.frontend_interface = frontend_interface
 
     def delete(self):
         for amphora in self.load_balancer.amphorae:
@@ -778,3 +784,22 @@ class FlavorProfile(BaseDataModel):
         self.name = name
         self.provider_name = provider_name
         self.flavor_data = flavor_data
+
+
+class Distributor(BaseDataModel):
+
+    def __init__(self, id=None, name=None, description=None,
+                 frontend_subnet=None, distributor_driver=None,
+                 enabled=None, provisioning_status=None,
+                 operating_status=None, config_data=None,
+                 load_balancers=None):
+        self.id = id
+        self.name = name
+        self.description = description
+        self.frontend_subnet = frontend_subnet
+        self.distributor_driver = distributor_driver
+        self.enabled = enabled
+        self.provisioning_status = provisioning_status
+        self.operating_status = operating_status
+        self.config_data = config_data
+        self.load_balancers = load_balancers

@@ -44,6 +44,7 @@ class BaseRepositoryTest(base.OctaviaDBTestBase):
     FAKE_UUID_5 = uuidutils.generate_uuid()
     FAKE_UUID_6 = uuidutils.generate_uuid()
     FAKE_UUID_7 = uuidutils.generate_uuid()
+    FAKE_UUID_8 = uuidutils.generate_uuid()
     FAKE_EXP_AGE = 10
 
     def setUp(self):
@@ -66,6 +67,7 @@ class BaseRepositoryTest(base.OctaviaDBTestBase):
         self.clusterquota_repo = repo.ClusterQuotasRepository()
         self.flavor_repo = repo.FlavorRepository()
         self.flavor_profile_repo = repo.FlavorProfileRepository()
+        self.distributor_repo = repo.DistributorRepository()
 
     def test_get_all_return_value(self):
         pool_list, _ = self.pool_repo.get_all(self.session,
@@ -120,7 +122,8 @@ class AllRepositoriesTest(base.OctaviaDBTestBase):
                            'listener_stats', 'amphora', 'sni',
                            'amphorahealth', 'vrrpgroup', 'l7rule', 'l7policy',
                            'amp_build_slots', 'amp_build_req', 'quotas',
-                           'flavor', 'flavor_profile', 'clusterquotas')
+                           'flavor', 'flavor_profile', 'clusterquotas',
+                           'distributor')
         for repo_attr in repo_attr_names:
             single_repo = getattr(self.repos, repo_attr, None)
             message = ("Class Repositories should have %s instance"
@@ -151,6 +154,7 @@ class AllRepositoriesTest(base.OctaviaDBTestBase):
               'provider': 'amphora',
               'server_group_id': uuidutils.generate_uuid(),
               'project_id': uuidutils.generate_uuid(),
+              'distributor_id': None,
               'id': uuidutils.generate_uuid(), 'flavor_id': None,
               'tags': ['test_tag']}
         vip = {'ip_address': '192.0.2.1',
@@ -5589,3 +5593,60 @@ class FlavorRepositoryTest(BaseRepositoryTest):
         self.assertRaises(sa_exception.NoResultFound,
                           self.flavor_repo.get_flavor_provider,
                           self.session, self.FAKE_UUID_1)
+
+
+class TestDistributorRepository(BaseRepositoryTest):
+
+    def setUp(self):
+        super(TestDistributorRepository, self).setUp()
+
+    def create_distributor(self, distributor_id, name='fake_distirbutor',
+                           driver='best', enabled=True,
+                           prov_status=constants.ACTIVE,
+                           op_status=constants.ONLINE):
+        distributor = self.distributor_repo.create(
+            self.session, id=distributor_id, name=name,
+            description="fake distributor", distributor_driver=driver,
+            enabled=enabled, provisioning_status=prov_status, config_data='{}',
+            operating_status=op_status, frontend_subnet=self.FAKE_UUID_8)
+        return distributor
+
+    def test_get(self):
+        distributor = self.create_distributor(self.FAKE_UUID_1)
+        new_dist = self.distributor_repo.get(self.session, id=distributor.id)
+        self.assertIsInstance(new_dist, models.Distributor)
+        self.assertEqual(distributor, new_dist)
+
+    def test_get_all(self):
+        distributor1 = self.create_distributor(self.FAKE_UUID_1,
+                                               name="distributor01")
+        distributor2 = self.create_distributor(self.FAKE_UUID_2,
+                                               name="distributor02")
+        dist_list, _ = self.distributor_repo.get_all(self.session)
+        self.assertIsInstance(dist_list, list)
+        self.assertEqual(2, len(dist_list))
+        self.assertEqual(distributor1, dist_list[0])
+        self.assertEqual(distributor2, dist_list[1])
+
+    def test_create(self):
+        distributor = self.create_distributor(self.FAKE_UUID_1)
+        self.assertIsInstance(distributor, models.Distributor)
+        self.assertEqual(self.FAKE_UUID_1, distributor.id)
+        self.assertEqual('best', distributor.distributor_driver)
+        self.assertTrue(distributor.enabled)
+        self.assertEqual(constants.ACTIVE, distributor.provisioning_status)
+        self.assertEqual(constants.ONLINE, distributor.operating_status)
+
+    def test_update(self):
+        distributor = self.create_distributor(self.FAKE_UUID_1)
+        self.assertEqual('best', distributor.distributor_driver)
+        self.distributor_repo.update(self.session, distributor.id,
+                                     distributor_driver='better')
+        new_dist = self.distributor_repo.get(self.session, id=self.FAKE_UUID_1)
+        self.assertEqual('better', new_dist.distributor_driver)
+
+    def test_delete(self):
+        distributor = self.create_distributor(self.FAKE_UUID_1)
+        self.distributor_repo.delete(self.session, id=distributor.id)
+        self.assertIsNone(self.distributor_repo.get(self.session,
+                                                    id=self.FAKE_UUID_1))

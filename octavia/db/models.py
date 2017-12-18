@@ -393,6 +393,13 @@ class LoadBalancer(base_models.BASE, base_models.IdMixin,
     flavor_id = sa.Column(
         sa.String(36),
         sa.ForeignKey("flavor.id", name="fk_lb_flavor_id"), nullable=True)
+    distributor_id = sa.Column(
+        sa.String(36), sa.ForeignKey("distributor.id",
+                                     name="fk_load_balancer_distributor_id"),
+        nullable=True)
+    distributor = orm.relationship("Distributor", uselist=False,
+                                   backref=orm.backref("load_balancers",
+                                                       uselist=True))
 
 
 class VRRPGroup(base_models.BASE):
@@ -584,6 +591,9 @@ class Amphora(base_models.BASE, base_models.IdMixin, models.TimestampMixin):
     load_balancer = orm.relationship("LoadBalancer", uselist=False,
                                      back_populates='amphorae')
     compute_flavor = sa.Column(sa.String(255), nullable=True)
+    frontend_ip = sa.Column(sa.String(64), nullable=True)
+    frontend_port_id = sa.Column(sa.String(36), nullable=True)
+    frontend_interface = sa.Column(sa.String(16), nullable=True)
 
 
 class AmphoraHealth(base_models.BASE):
@@ -782,4 +792,35 @@ class Flavor(base_models.BASE,
         sa.String(36),
         sa.ForeignKey("flavor_profile.id",
                       name="fk_flavor_flavor_profile_id"),
+        nullable=False)
+
+
+class Distributor(base_models.BASE, base_models.IdMixin,
+                  base_models.NameMixin):
+
+    __data_model__ = data_models.Distributor
+
+    __tablename__ = "distributor"
+
+    __table_args__ = (
+        sa.UniqueConstraint('name',
+                            name='uq_distributor_name'),
+    )
+
+    description = sa.Column(sa.String(255), nullable=True)
+    frontend_subnet = sa.Column(sa.String(36), nullable=False)
+    distributor_driver = sa.Column(sa.String(64), nullable=False)
+    config_data = sa.Column(sa.String(4096), nullable=True)
+    enabled = sa.Column(sa.Boolean(), nullable=False)
+
+    provisioning_status = sa.Column(
+        sa.String(16),
+        sa.ForeignKey("provisioning_status.name",
+                      name="fk_distributor_provisioning_status_name"),
+        nullable=False)
+
+    operating_status = sa.Column(
+        sa.String(16),
+        sa.ForeignKey("operating_status.name",
+                      name="fk_distributor_operating_status_name"),
         nullable=False)

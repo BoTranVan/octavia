@@ -44,6 +44,9 @@ class AmphoraResponse(BaseAmphoraType):
     updated_at = wtypes.wsattr(wtypes.datetime.datetime)
     image_id = wtypes.wsattr(wtypes.UuidType())
     compute_flavor = wtypes.wsattr(wtypes.StringType())
+    frontend_ip = wtypes.wsattr(types.IPAddressType())
+    frontend_port_id = wtypes.wsattr(wtypes.UuidType())
+    frontend_interface = wtypes.wsattr(wtypes.StringType())
 
     @classmethod
     def from_data_model(cls, data_model, children=False):
