@@ -15,12 +15,14 @@
 from oslo_config import cfg
 from oslo_log import log as logging
 from pecan import rest
+from sqlalchemy import func
 from wsme import types as wtypes
 
 from octavia.common import constants
 from octavia.common import data_models
 from octavia.common import exceptions
 from octavia.common import policy
+from octavia.db import models as db_models
 from octavia.db import repositories
 
 CONF = cfg.CONF
@@ -182,6 +184,39 @@ class BaseController(rest.RestController):
             if db_quotas.l7rule is None:
                 db_quotas.l7rule = CONF.quotas.default_l7rule_quota
         return db_quotas
+
+    def _get_db_usage(self, session, project_id=None):
+        """Gets Usage data from the database."""
+        def get_statii_for_model(model):
+            prov_query = session.query(
+                model.provisioning_status, func.count(model.id)
+            ).group_by(model.provisioning_status)
+            op_query = session.query(
+                model.operating_status, func.count(model.id)
+            ).group_by(model.operating_status)
+            if project_id:
+                prov_query = prov_query.filter_by(project_id=project_id)
+                op_query = op_query.filter_by(project_id=project_id)
+            data = {
+                constants.PROVISIONING_STATUS: prov_query.all(),
+                constants.OPERATING_STATUS: op_query.all()
+            }
+            data['total'] = sum(
+                [x[1] for x in data[constants.PROVISIONING_STATUS]])
+            return data
+
+        usage_types = (
+            db_models.LoadBalancer,
+            db_models.Listener,
+            db_models.Pool,
+            db_models.HealthMonitor,
+            db_models.Member,
+            db_models.L7Policy,
+            db_models.L7Rule
+        )
+
+        return {model.__tablename__: get_statii_for_model(model)
+                for model in usage_types}
 
     def _auth_get_all(self, context, project_id):
         # Check authorization to list objects under all projects

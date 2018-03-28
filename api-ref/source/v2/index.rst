@@ -60,3 +60,8 @@ Providers
 Amphorae
 --------
 .. include:: amphora.inc
+
+-----
+Usage
+-----
+.. include:: usage.inc

@@ -85,6 +85,18 @@ rules = [
     policy.RuleDefault('load-balancer:write-quota',
                        'role:load-balancer_quota_admin or '
                        'rule:load-balancer:admin'),
+
+    policy.RuleDefault('load-balancer:read-usage',
+                       'rule:load-balancer:observer_and_owner or '
+                       'rule:load-balancer:global_observer or '
+                       'rule:load-balancer:member_and_owner or '
+                       'role:load-balancer_usage_admin or '
+                       'rule:load-balancer:admin'),
+
+    policy.RuleDefault('load-balancer:read-usage-global',
+                       'rule:load-balancer:global_observer or '
+                       'role:load-balancer_usage_admin or '
+                       'rule:load-balancer:admin'),
 ]
 
 

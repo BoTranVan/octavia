@@ -24,6 +24,7 @@ from octavia.api.v2.controllers import load_balancer
 from octavia.api.v2.controllers import pool
 from octavia.api.v2.controllers import provider
 from octavia.api.v2.controllers import quotas
+from octavia.api.v2.controllers import usage
 
 
 class BaseV2Controller(base.BaseController):
@@ -43,6 +44,7 @@ class BaseV2Controller(base.BaseController):
         self.healthmonitors = health_monitor.HealthMonitorController()
         self.quotas = quotas.QuotasController()
         self.providers = provider.ProviderController()
+        self.usage = usage.UsageController()
 
     @wsme_pecan.wsexpose(wtypes.text)
     def get(self):

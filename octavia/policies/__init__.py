@@ -24,6 +24,7 @@ from octavia.policies import member
 from octavia.policies import pool
 from octavia.policies import provider
 from octavia.policies import quota
+from octavia.policies import usage
 
 
 def list_rules():
@@ -39,4 +40,5 @@ def list_rules():
         provider.list_rules(),
         quota.list_rules(),
         amphora.list_rules(),
+        usage.list_rules(),
     )

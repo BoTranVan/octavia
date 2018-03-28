@@ -1159,6 +1159,55 @@ updated_at:
   in: body
   required: true
   type: string
+usage-healthmonitors:
+  description: |
+    The `total` healthmonitor count, and a count of all healthmonitors
+    categorized by their `provisioning_status` and `operating_status`.
+  in: body
+  required: true
+  type: object
+usage-l7policies:
+  description: |
+    The `total` l7policy count, and a count of all l7policies
+    categorized by their `provisioning_status` and `operating_status`.
+  in: body
+  required: true
+  type: object
+usage-l7rules:
+  description: |
+    The `total` l7rule count, and a count of all l7rules
+    categorized by their `provisioning_status` and `operating_status`.
+  in: body
+  required: true
+  type: object
+usage-listeners:
+  description: |
+    The `total` listener count, and a count of all listeners
+    categorized by their `provisioning_status` and `operating_status`.
+  in: body
+  required: true
+  type: object
+usage-loadbalancers:
+  description: |
+    The `total` loadbalancer count, and a count of all loadbalancers
+    categorized by their `provisioning_status` and `operating_status`.
+  in: body
+  required: true
+  type: object
+usage-members:
+  description: |
+    The `total` member count, and a count of all members
+    categorized by their `provisioning_status` and `operating_status`.
+  in: body
+  required: true
+  type: object
+usage-pools:
+  description: |
+    The `total` pool count, and a count of all pools
+    categorized by their `provisioning_status` and `operating_status`.
+  in: body
+  required: true
+  type: object
 vip_address:
   description: |
     The IP address of the Virtual IP (VIP).

@@ -36,9 +36,6 @@ BALANCE_MAP = {
     constants.LB_ALGORITHM_SOURCE_IP: 'source'
 }
 
-ACTIVE_PENDING_STATUSES = constants.SUPPORTED_PROVISIONING_STATUSES + (
-    constants.DEGRADED,)
-
 BASE_PATH = '/var/lib/octavia'
 BASE_CRT_DIR = BASE_PATH + '/certs'
 

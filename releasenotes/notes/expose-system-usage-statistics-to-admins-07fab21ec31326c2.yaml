@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Added a new resource `/lbaas/usage` to give operators insight into system
+    usage. It will display the total number of each object in the system, as
+    well as breaking them down by provisioning and operating status.

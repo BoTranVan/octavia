@@ -111,26 +111,22 @@ PENDING_UPDATE = 'PENDING_UPDATE'
 PENDING_CREATE = 'PENDING_CREATE'
 DELETED = 'DELETED'
 ERROR = 'ERROR'
-SUPPORTED_PROVISIONING_STATUSES = (ACTIVE, AMPHORA_ALLOCATED,
-                                   AMPHORA_BOOTING, AMPHORA_READY,
-                                   PENDING_DELETE, PENDING_CREATE,
+PROVISIONING_STATUS = 'provisioning_status'
+SUPPORTED_PROVISIONING_STATUSES = (ACTIVE, PENDING_DELETE, PENDING_CREATE,
                                    PENDING_UPDATE, DELETED, ERROR)
 MUTABLE_STATUSES = (ACTIVE,)
 DELETABLE_STATUSES = (ACTIVE, ERROR)
 FAILOVERABLE_STATUSES = (ACTIVE, ERROR)
 
 SUPPORTED_AMPHORA_STATUSES = (AMPHORA_ALLOCATED, AMPHORA_BOOTING, ERROR,
-                              AMPHORA_READY, DELETED,
-                              PENDING_CREATE, PENDING_DELETE)
+                              AMPHORA_READY, DELETED)
 
 ONLINE = 'ONLINE'
 OFFLINE = 'OFFLINE'
 DEGRADED = 'DEGRADED'
-ERROR = 'ERROR'
 DRAINING = 'DRAINING'
 NO_MONITOR = 'NO_MONITOR'
 OPERATING_STATUS = 'operating_status'
-PROVISIONING_STATUS = 'provisioning_status'
 SUPPORTED_OPERATING_STATUSES = (ONLINE, OFFLINE, DEGRADED, ERROR, DRAINING,
                                 NO_MONITOR)
 
@@ -518,6 +514,8 @@ RULE_API_WRITE = 'rule:load-balancer:write'
 RULE_API_READ_QUOTA = 'rule:load-balancer:read-quota'
 RULE_API_READ_QUOTA_GLOBAL = 'rule:load-balancer:read-quota-global'
 RULE_API_WRITE_QUOTA = 'rule:load-balancer:write-quota'
+RULE_API_READ_USAGE = 'rule:load-balancer:read-usage'
+RULE_API_READ_USAGE_GLOBAL = 'rule:load-balancer:read-usage-global'
 RBAC_LOADBALANCER = '{}:loadbalancer:'.format(LOADBALANCER_API)
 RBAC_LISTENER = '{}:listener:'.format(LOADBALANCER_API)
 RBAC_POOL = '{}:pool:'.format(LOADBALANCER_API)
@@ -526,6 +524,7 @@ RBAC_HEALTHMONITOR = '{}:healthmonitor:'.format(LOADBALANCER_API)
 RBAC_L7POLICY = '{}:l7policy:'.format(LOADBALANCER_API)
 RBAC_L7RULE = '{}:l7rule:'.format(LOADBALANCER_API)
 RBAC_QUOTA = '{}:quota:'.format(LOADBALANCER_API)
+RBAC_USAGE = '{}:usage:'.format(LOADBALANCER_API)
 RBAC_AMPHORA = '{}:amphora:'.format(LOADBALANCER_API)
 RBAC_PROVIDER = '{}:provider:'.format(LOADBALANCER_API)
 RBAC_POST = 'post'

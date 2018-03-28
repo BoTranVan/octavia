@@ -1,0 +1,135 @@
+{
+    "loadbalancers": {
+        "provisioning_status": {
+            "PENDING_DELETE": 0,
+            "PENDING_UPDATE": 0,
+            "DELETED": 0,
+            "PENDING_CREATE": 0,
+            "ACTIVE": 1,
+            "ERROR": 0
+        },
+        "operating_status": {
+            "NO_MONITOR": 0,
+            "DEGRADED": 0,
+            "DRAINING": 0,
+            "OFFLINE": 0,
+            "ERROR": 0,
+            "ONLINE": 1
+        },
+        "total": 1
+    },
+    "pools": {
+        "provisioning_status": {
+            "PENDING_DELETE": 0,
+            "PENDING_UPDATE": 0,
+            "DELETED": 0,
+            "PENDING_CREATE": 0,
+            "ACTIVE": 1,
+            "ERROR": 0
+        },
+        "operating_status": {
+            "NO_MONITOR": 0,
+            "DEGRADED": 0,
+            "DRAINING": 0,
+            "OFFLINE": 0,
+            "ERROR": 0,
+            "ONLINE": 1
+        },
+        "total": 1
+    },
+    "listeners": {
+        "provisioning_status": {
+            "PENDING_DELETE": 0,
+            "PENDING_UPDATE": 0,
+            "DELETED": 0,
+            "PENDING_CREATE": 0,
+            "ACTIVE": 1,
+            "ERROR": 0
+        },
+        "operating_status": {
+            "NO_MONITOR": 0,
+            "DEGRADED": 0,
+            "DRAINING": 0,
+            "OFFLINE": 0,
+            "ERROR": 0,
+            "ONLINE": 1
+        },
+        "total": 1
+    },
+    "l7policies": {
+        "provisioning_status": {
+            "PENDING_DELETE": 0,
+            "PENDING_UPDATE": 0,
+            "DELETED": 0,
+            "PENDING_CREATE": 0,
+            "ACTIVE": 1,
+            "ERROR": 0
+        },
+        "operating_status": {
+            "NO_MONITOR": 0,
+            "DEGRADED": 0,
+            "DRAINING": 0,
+            "OFFLINE": 0,
+            "ERROR": 0,
+            "ONLINE": 1
+        },
+        "total": 1
+    },
+    "l7rules": {
+        "provisioning_status": {
+            "PENDING_DELETE": 0,
+            "PENDING_UPDATE": 0,
+            "DELETED": 0,
+            "PENDING_CREATE": 0,
+            "ACTIVE": 1,
+            "ERROR": 0
+        },
+        "operating_status": {
+            "NO_MONITOR": 0,
+            "DEGRADED": 0,
+            "DRAINING": 0,
+            "OFFLINE": 0,
+            "ERROR": 0,
+            "ONLINE": 1
+        },
+        "total": 1
+    },
+    "healthmonitors": {
+        "provisioning_status": {
+            "PENDING_DELETE": 0,
+            "PENDING_UPDATE": 0,
+            "DELETED": 0,
+            "PENDING_CREATE": 0,
+            "ACTIVE": 1,
+            "ERROR": 0
+        },
+        "operating_status": {
+            "NO_MONITOR": 0,
+            "DEGRADED": 0,
+            "DRAINING": 0,
+            "OFFLINE": 0,
+            "ERROR": 0,
+            "ONLINE": 1
+        },
+        "total": 1
+    },
+    "members": {
+        "provisioning_status": {
+            "PENDING_DELETE": 0,
+            "PENDING_UPDATE": 0,
+            "DELETED": 0,
+            "PENDING_CREATE": 0,
+            "ACTIVE": 1,
+            "ERROR": 0
+        },
+        "operating_status": {
+            "NO_MONITOR": 0,
+            "DEGRADED": 0,
+            "DRAINING": 0,
+            "OFFLINE": 0,
+            "ERROR": 0,
+            "ONLINE": 1
+        },
+        "total": 1
+    }
+}

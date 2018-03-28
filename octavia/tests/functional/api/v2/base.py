@@ -71,6 +71,9 @@ class BaseAPITest(base_db_test.OctaviaDBTestBase):
 
     PROVIDERS_PATH = '/lbaas/providers'
 
+    USAGE_PATH = '/lbaas/usage'
+    USAGE_PROJECT_PATH = USAGE_PATH + '/{project_id}'
+
     NOT_AUTHORIZED_BODY = {
         'debuginfo': None, 'faultcode': 'Client',
         'faultstring': 'Policy does not allow this request to be performed.'}
