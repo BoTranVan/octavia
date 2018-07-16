@@ -537,6 +537,7 @@ class Amphora(base_models.BASE, base_models.IdMixin, models.TimestampMixin):
     image_id = sa.Column(sa.String(36), nullable=True)
     load_balancer = orm.relationship("LoadBalancer", uselist=False,
                                      back_populates='amphorae')
+    compute_flavor = sa.Column(sa.String(255), nullable=True)
 
 
 class AmphoraHealth(base_models.BASE):
