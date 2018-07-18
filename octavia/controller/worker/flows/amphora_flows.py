@@ -45,7 +45,7 @@ class AmphoraFlows(object):
                                 provides=constants.AMPHORA_ID))
         create_amphora_flow.add(lifecycle_tasks.AmphoraIDToErrorOnRevertTask(
             requires=constants.AMPHORA_ID))
-        if self.REST_AMPHORA_DRIVER:
+        if self.REST_AMPHORA_DRIVER and CONF.amphora_agent.enable_tls:
             create_amphora_flow.add(cert_task.GenerateServerPEMTask(
                                     provides=constants.SERVER_PEM))
 
@@ -122,7 +122,7 @@ class AmphoraFlows(object):
             role in (constants.ROLE_BACKUP, constants.ROLE_MASTER) and
             CONF.nova.enable_anti_affinity)
 
-        if self.REST_AMPHORA_DRIVER:
+        if self.REST_AMPHORA_DRIVER and CONF.amphora_agent.enable_tls:
             create_amp_for_lb_subflow.add(cert_task.GenerateServerPEMTask(
                 name=sf_name + '-' + constants.GENERATE_SERVER_PEM,
                 provides=constants.SERVER_PEM))

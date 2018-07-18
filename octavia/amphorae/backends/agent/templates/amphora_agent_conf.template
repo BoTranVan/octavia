@@ -31,8 +31,13 @@ heartbeat_interval = {{ heartbeat_interval }}
 heartbeat_key = {{ heartbeat_key }}
 
 [amphora_agent]
+enable_tls = {{enable_tls}}
+{% if agent_server_ca -%}
 agent_server_ca = {{ agent_server_ca }}
+{% endif -%}
+{% if agent_server_cert -%}
 agent_server_cert = {{ agent_server_cert }}
+{% endif -%}
 {% if agent_server_network_dir -%}
 agent_server_network_dir = {{ agent_server_network_dir }}
 {% endif -%}

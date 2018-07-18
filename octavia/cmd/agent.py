@@ -80,4 +80,14 @@ def main():
         'errorlog': '/var/log/amphora-agent.log',
         'loglevel': 'debug',
     }
+    if not CONF.amphora_agent.enable_tls:
+        options = {
+            'bind': bind_ip_port,
+            'workers': 1,
+            'timeout': CONF.amphora_agent.agent_request_read_timeout,
+            'preload_app': True,
+            'accesslog': '/var/log/amphora-agent.log',
+            'errorlog': '/var/log/amphora-agent.log',
+            'loglevel': 'debug',
+        }
     AmphoraAgent(server_instance.app, options).run()

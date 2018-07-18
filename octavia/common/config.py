@@ -143,6 +143,10 @@ amphora_agent_opts = [
     cfg.StrOpt('amphora_udp_driver',
                default='keepalived_lvs',
                help='The UDP API backend for amphora agent.'),
+    cfg.BoolOpt('enable_tls', default=True,
+                help=_('If False, the amphora agent provide insecurity rest '
+                       'api with http. If True, the amphora agent api will be '
+                       'encrypted with https.')),
 ]
 
 networking_opts = [

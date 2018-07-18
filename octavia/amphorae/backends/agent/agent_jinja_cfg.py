@@ -36,8 +36,12 @@ class AgentJinjaTemplater(object):
 
     def build_agent_config(self, amphora_id):
         return self.agent_template.render(
-            {'agent_server_ca': CONF.amphora_agent.agent_server_ca,
-             'agent_server_cert': CONF.amphora_agent.agent_server_cert,
+            {'enable_tls': CONF.amphora_agent.enable_tls,
+             'agent_server_ca':
+                 CONF.amphora_agent.agent_server_ca if
+                 CONF.amphora_agent.enable_tls else None,
+             'agent_server_cert': CONF.amphora_agent.agent_server_cert if
+                 CONF.amphora_agent.enable_tls else None,
              'agent_server_network_dir':
                  CONF.amphora_agent.agent_server_network_dir,
              'agent_server_network_file':

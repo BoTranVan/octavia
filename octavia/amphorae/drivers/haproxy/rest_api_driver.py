@@ -304,9 +304,10 @@ class AmphoraAPIClient(object):
                                              consts.AMP_ACTION_RELOAD)
 
         self.session = requests.Session()
-        self.session.cert = CONF.haproxy_amphora.client_cert
-        self.ssl_adapter = CustomHostNameCheckingAdapter()
-        self.session.mount('https://', self.ssl_adapter)
+        if CONF.amphora_agent.enable_tls:
+            self.session.cert = CONF.haproxy_amphora.client_cert
+            self.ssl_adapter = CustomHostNameCheckingAdapter()
+            self.session.mount('https://', self.ssl_adapter)
 
     def _base_url(self, ip):
         if utils.is_ipv6_lla(ip):
@@ -315,7 +316,9 @@ class AmphoraAPIClient(object):
                 interface=CONF.haproxy_amphora.lb_network_interface)
         elif utils.is_ipv6(ip):
             ip = '[{ip}]'.format(ip=ip)
-        return "https://{ip}:{port}/{version}/".format(
+        protocol = 'https' if CONF.amphora_agent.enable_tls else 'http'
+        return "{protocol}://{ip}:{port}/{version}/".format(
+            protocol=protocol,
             ip=ip,
             port=CONF.haproxy_amphora.bind_port,
             version=API_VERSION)
@@ -345,7 +348,8 @@ class AmphoraAPIClient(object):
         headers = reqargs.setdefault('headers', {})
 
         headers['User-Agent'] = OCTAVIA_API_CLIENT
-        self.ssl_adapter.uuid = amp.id
+        if CONF.amphora_agent.enable_tls:
+            self.ssl_adapter.uuid = amp.id
         exception = None
         # Keep retrying
         for a in six.moves.xrange(conn_max_retries):
