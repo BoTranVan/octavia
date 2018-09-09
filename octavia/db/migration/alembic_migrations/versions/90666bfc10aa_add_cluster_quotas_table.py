@@ -15,7 +15,7 @@
 """add cluster_quotas table
 
 Revision ID: 90666bfc10aa
-Revises: 32e5c35b26a8
+Revises: 4f65b4f91c39
 Create Date: 2019-01-18 10:54:25.493550
 
 """

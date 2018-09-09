@@ -16,7 +16,7 @@
 """amphora add flavor id
 
 Revision ID: 4f65b4f91c39
-Revises: 80dba23a159f
+Revises: 32e5c35b26a8
 Create Date: 2018-07-16 09:59:07.169894
 
 """
