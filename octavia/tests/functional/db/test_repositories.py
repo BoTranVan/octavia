@@ -142,7 +142,8 @@ class AllRepositoriesTest(base.OctaviaDBTestBase):
               'provider': 'amphora',
               'server_group_id': uuidutils.generate_uuid(),
               'project_id': uuidutils.generate_uuid(),
-              'id': uuidutils.generate_uuid()}
+              'id': uuidutils.generate_uuid(),
+              'tags': ['test_tag']}
         vip = {'ip_address': '192.0.2.1',
                'port_id': uuidutils.generate_uuid(),
                'subnet_id': uuidutils.generate_uuid(),
@@ -169,7 +170,8 @@ class AllRepositoriesTest(base.OctaviaDBTestBase):
                 'enabled': True, 'operating_status': constants.ONLINE,
                 'project_id': uuidutils.generate_uuid(),
                 'id': uuidutils.generate_uuid(),
-                'provisioning_status': constants.ACTIVE}
+                'provisioning_status': constants.ACTIVE,
+                'tags': ['test_tag']}
         pool_dm = self.repos.create_pool_on_load_balancer(
             self.session, pool, listener_id=self.listener.id)
         pool_dm_dict = pool_dm.to_dict()
@@ -194,7 +196,8 @@ class AllRepositoriesTest(base.OctaviaDBTestBase):
                 'enabled': True, 'operating_status': constants.ONLINE,
                 'project_id': uuidutils.generate_uuid(),
                 'id': uuidutils.generate_uuid(),
-                'provisioning_status': constants.ACTIVE}
+                'provisioning_status': constants.ACTIVE,
+                'tags': ['test_tag']}
         sp = {'type': constants.SESSION_PERSISTENCE_HTTP_COOKIE,
               'cookie_name': 'cookie_monster',
               'pool_id': pool['id'],
@@ -232,7 +235,8 @@ class AllRepositoriesTest(base.OctaviaDBTestBase):
                 'enabled': True, 'operating_status': constants.ONLINE,
                 'project_id': uuidutils.generate_uuid(),
                 'id': uuidutils.generate_uuid(),
-                'provisioning_status': constants.ACTIVE}
+                'provisioning_status': constants.ACTIVE,
+                'tags': ['test_tag']}
         pool_dm = self.repos.create_pool_on_load_balancer(
             self.session, pool, listener_id=self.listener.id)
         update_pool = {'protocol': constants.PROTOCOL_TCP, 'name': 'up_pool'}
@@ -259,7 +263,8 @@ class AllRepositoriesTest(base.OctaviaDBTestBase):
                 'enabled': True, 'operating_status': constants.ONLINE,
                 'project_id': uuidutils.generate_uuid(),
                 'id': uuidutils.generate_uuid(),
-                'provisioning_status': constants.ACTIVE}
+                'provisioning_status': constants.ACTIVE,
+                'tags': ['test_tag']}
         sp = {'type': constants.SESSION_PERSISTENCE_HTTP_COOKIE,
               'cookie_name': 'cookie_monster',
               'pool_id': pool['id'],
@@ -2442,7 +2447,7 @@ class PoolRepositoryTest(BaseRepositoryTest):
             description="pool_description", protocol=constants.PROTOCOL_HTTP,
             lb_algorithm=constants.LB_ALGORITHM_ROUND_ROBIN,
             provisioning_status=constants.ACTIVE,
-            operating_status=constants.ONLINE, enabled=True)
+            operating_status=constants.ONLINE, enabled=True, tags=['test_tag'])
         return pool
 
     def test_get(self):
@@ -2583,7 +2588,7 @@ class MemberRepositoryTest(BaseRepositoryTest):
             protocol=constants.PROTOCOL_HTTP,
             lb_algorithm=constants.LB_ALGORITHM_ROUND_ROBIN,
             provisioning_status=constants.ACTIVE,
-            operating_status=constants.ONLINE, enabled=True)
+            operating_status=constants.ONLINE, enabled=True, tags=['test_tag'])
 
     def create_member(self, member_id, project_id, pool_id, ip_address):
         member = self.member_repo.create(self.session, id=member_id,
@@ -2730,7 +2735,8 @@ class TestListenerRepositoryTest(BaseRepositoryTest):
             protocol=constants.PROTOCOL_HTTP, protocol_port=port,
             connection_limit=1, load_balancer_id=self.load_balancer.id,
             default_pool_id=default_pool_id, operating_status=constants.ONLINE,
-            provisioning_status=constants.ACTIVE, enabled=True, peer_port=1025)
+            provisioning_status=constants.ACTIVE, enabled=True, peer_port=1025,
+            tags=['test_tag'])
         return listener
 
     def create_amphora(self, amphora_id, loadbalancer_id):
@@ -3107,7 +3113,7 @@ class HealthMonitorRepositoryTest(BaseRepositoryTest):
             url_path="http://localhost:80/index.php",
             provisioning_status=constants.ACTIVE,
             operating_status=constants.ONLINE,
-            expected_codes="200", enabled=True)
+            expected_codes="200", enabled=True, tags=['test_tag'])
         self.assertEqual(hm_id, health_monitor.id)
         return health_monitor
 
@@ -3156,7 +3162,7 @@ class LoadBalancerRepositoryTest(BaseRepositoryTest):
                                  description="lb_description",
                                  provisioning_status=constants.ACTIVE,
                                  operating_status=constants.ONLINE,
-                                 enabled=True)
+                                 enabled=True, tags=['test_tag'])
         return lb
 
     def test_get(self):
@@ -3965,7 +3971,7 @@ class L7PolicyRepositoryTest(BaseRepositoryTest):
             protocol=constants.PROTOCOL_HTTP,
             lb_algorithm=constants.LB_ALGORITHM_ROUND_ROBIN,
             provisioning_status=constants.ACTIVE,
-            operating_status=constants.ONLINE, enabled=True)
+            operating_status=constants.ONLINE, enabled=True, tags=['test_tag'])
         return pool
 
     def create_l7policy(self, l7policy_id, listener_id, position,
@@ -4368,7 +4374,8 @@ class L7RuleRepositoryTest(BaseRepositoryTest):
             self.session, id=l7rule_id, l7policy_id=l7policy_id,
             type=type, compare_type=compare_type, key=key, value=value,
             invert=invert, provisioning_status=constants.ACTIVE,
-            operating_status=constants.ONLINE, enabled=enabled)
+            operating_status=constants.ONLINE, enabled=enabled,
+            tags=['test_tag'])
         return l7rule
 
     def test_get(self):
