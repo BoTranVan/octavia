@@ -1,5 +1,5 @@
 [gerrit]
-host=review.openstack.org
+host=172.18.211.200
 port=29418
-project=openstack/octavia.git
-defaultbranch=stable/rocky
+project=openstack/octavia
+defaultbranch=rocky-3.0.1
