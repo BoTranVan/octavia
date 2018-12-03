@@ -209,6 +209,8 @@ Group:      Applications/System
 BuildArch: noarch
 
 Requires:   openstack-%{service}-common = %{version}-%{release}
+Requires:   httpd
+requires:   mod_wsgi
 
 
 %description api
@@ -287,6 +289,9 @@ find %{service} -name \*.py -exec sed -i '/\/usr\/bin\/env python/{d;q}' {} +
 # Let's handle dependencies ourseleves
 rm -f requirements.txt
 
+# adjust paths to WSGI scripts
+sed -i 's#/local/bin#/bin#' httpd/octavia-api.conf
+sed -i 's#apache2#httpd#' httpd/octavia-api.conf
 
 %build
 export PBR_VERSION=%{version}
@@ -356,8 +361,10 @@ install -d -m 755 %{buildroot}%{_localstatedir}/log/%{service}
 install -d -m 755 %{buildroot}%{_localstatedir}/run/%{service}
 
 # Install dist conf
-install -p -D -m 640 %{SOURCE30} %{buildroot}%{_datadir}/%{service}/%{service}-dist.conf
+install -p -D -m 644 %{SOURCE30} %{buildroot}%{_datadir}/%{service}/%{service}-dist.conf
 
+# Install sample HTTPD integration files
+install -p -D -m 644 httpd/octavia-api.conf  %{buildroot}%{_sysconfdir}/httpd/conf.d/octavia-api.conf
 
 # Create configuration directories for all services that can be populated by users with custom *.conf files
 mkdir -p %{buildroot}/%{_sysconfdir}/%{service}/conf.d/common
@@ -399,10 +406,12 @@ stestr run
 
 %post api
 %systemd_post %{service}-api.service
+%systemd_post %{service}-api.conf
 
 
 %preun api
 %systemd_preun %{service}-api.service
+%systemd_preun %{service}-api.conf
 
 
 %postun api
@@ -466,8 +475,8 @@ stestr run
 %dir %{_sysconfdir}/%{service}/conf.d
 %dir %{_sysconfdir}/%{service}/conf.d/common
 %attr(-, root, %{service}) %{_datadir}/%{service}/%{service}-dist.conf
-%config(noreplace) %attr(0640, root, %{service}) %{_sysconfdir}/%{service}/%{service}.conf
-%config(noreplace) %attr(0640, root, %{service}) %{_sysconfdir}/%{service}/policy.json
+%config(noreplace) %attr(0644, root, %{service}) %{_sysconfdir}/%{service}/%{service}.conf
+%config(noreplace) %attr(0644, root, %{service}) %{_sysconfdir}/%{service}/policy.json
 %config(noreplace) %{_sysconfdir}/logrotate.d/openstack-%{service}
 %dir %attr(0755, %{service}, %{service}) %{_sharedstatedir}/%{service}
 %dir %attr(0750, %{service}, %{service}) %{_localstatedir}/log/%{service}
@@ -488,6 +497,7 @@ stestr run
 %{_bindir}/%{service}-api
 %{_bindir}/%{service}-wsgi
 %{_unitdir}/%{service}-api.service
+%config(noreplace) %{_sysconfdir}/httpd/conf.d/%{service}-api.conf
 %dir %{_sysconfdir}/%{service}/conf.d/%{service}-api
 
 
