@@ -26,6 +26,7 @@ from octavia.policies import loadbalancer
 from octavia.policies import member
 from octavia.policies import pool
 from octavia.policies import provider
+from octavia.policies import provider_flavor
 from octavia.policies import quota
 from octavia.policies import usage
 
@@ -47,4 +48,5 @@ def list_rules():
         clusterquota.list_rules(),
         amphora.list_rules(),
         usage.list_rules(),
+        provider_flavor.list_rules(),
     )

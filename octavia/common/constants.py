@@ -540,6 +540,7 @@ RBAC_CLUSTERQUOTA = '{}:clusterquota:'.format(LOADBALANCER_API)
 RBAC_USAGE = '{}:usage:'.format(LOADBALANCER_API)
 RBAC_AMPHORA = '{}:amphora:'.format(LOADBALANCER_API)
 RBAC_PROVIDER = '{}:provider:'.format(LOADBALANCER_API)
+RBAC_PROVIDER_FLAVOR = '{}:provider-flavor:'.format(LOADBALANCER_API)
 RBAC_FLAVOR = '{}:flavor:'.format(LOADBALANCER_API)
 RBAC_FLAVOR_PROFILE = '{}:flavor-profile:'.format(LOADBALANCER_API)
 RBAC_POST = 'post'
