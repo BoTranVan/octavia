@@ -31,11 +31,17 @@ Operator Reference
    ../contributor/guides/dev-quick-start.rst
    guides/operator-maintenance.rst
    guides/upgrade.rst
-   ../configuration/configref.rst
-   ../configuration/policy.rst
    Anchor.rst
-   apache-httpd.rst
+   api-audit.rst
+   guides/certificates.rst
+   ../configuration/configref.rst
+   flavors.rst
+   guides/operator-maintenance.rst
+   ../configuration/policy.rst
    providers.rst
+   octavia-status
+   guides/upgrade.rst
+   apache-httpd.rst
 
 Indices and Search
 ------------------
