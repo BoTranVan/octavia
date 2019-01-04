@@ -57,6 +57,19 @@ bind {{ lb_vip_address }}:{{ listener.protocol_port }} {{
     {% endif %}
 {% endmacro %}
 
+{% macro l7rule_compare_file_type_macro(constants, ctype) %}
+    {% if ctype == constants.L7RULE_COMPARE_TYPE_REGEX %}
+        {{- "-m reg" -}}
+    {% elif ctype == constants.L7RULE_COMPARE_TYPE_STARTS_WITH %}
+        {{- "-m beg" -}}
+    {% elif ctype == constants.L7RULE_COMPARE_TYPE_ENDS_WITH %}
+        {{- "-m end" -}}
+    {% elif ctype == constants.L7RULE_COMPARE_TYPE_CONTAINS %}
+        {{- "-m sub" -}}
+    {% elif ctype == constants.L7RULE_COMPARE_TYPE_EQUAL_TO %}
+        {{- "-i" -}}
+    {% endif %}
+{% endmacro %}
 
 {% macro l7rule_macro(constants, l7rule) %}
     {% if l7rule.type == constants.L7RULE_TYPE_HOST_NAME %}
@@ -66,7 +79,7 @@ bind {{ lb_vip_address }}:{{ listener.protocol_port }} {{
         acl {{ l7rule.id }} path {{ l7rule_compare_type_macro(
             constants, l7rule.compare_type) }} {{ l7rule.value }}
     {% elif l7rule.type == constants.L7RULE_TYPE_FILE_TYPE %}
-        acl {{ l7rule.id }} path_end {{ l7rule_compare_type_macro(
+        acl {{ l7rule.id }} path_end {{ l7rule_compare_file_type_macro(
             constants, l7rule.compare_type) }} {{ l7rule.value }}
     {% elif l7rule.type == constants.L7RULE_TYPE_HEADER %}
         acl {{ l7rule.id }} req.hdr({{ l7rule.key }}) {{

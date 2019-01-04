@@ -605,7 +605,7 @@ class TestHaproxyCfg(base.TestCase):
               "this.*|that\n"
               "    redirect location http://www.example.com if "
               "!sample_l7rule_id_2 sample_l7rule_id_3\n"
-              "        acl sample_l7rule_id_4 path_end -m str jpg\n"
+              "        acl sample_l7rule_id_4 path_end -i jpg\n"
               "        acl sample_l7rule_id_5 req.hdr(host) -i -m end "
               ".example.com\n"
               "    http-request deny if sample_l7rule_id_4 "
