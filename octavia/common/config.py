@@ -147,6 +147,23 @@ amphora_agent_opts = [
                 help=_('If False, the amphora agent provide insecurity rest '
                        'api with http. If True, the amphora agent api will be '
                        'encrypted with https.')),
+    cfg.StrOpt('amphora_bgp_driver',
+               default='os_ken',
+               help='The BGP API backend for amphora agent.'),
+]
+
+bgp_opts = [
+    cfg.IntOpt('local_as', default=62000,
+               help=_('The local as number of bgp speaker.')),
+    cfg.IntOpt('remote_as', default=62000,
+               help=_('The remote as number of bgp peer.')),
+    cfg.StrOpt('router_id', default='127.0.0.1',
+               help=_('The router id of bgp speaker')),
+    cfg.StrOpt('peer_ip', default='127.0.0.1',
+               help=_('The ip address of bgp peer')),
+    cfg.StrOpt('peer_password', default=None,
+               help=_('The ip address of bgp peer'),
+               secret=True),
 ]
 
 networking_opts = [
@@ -660,6 +677,7 @@ cfg.CONF.register_opts(neutron_opts, group='neutron')
 cfg.CONF.register_opts(quota_opts, group='quotas')
 cfg.CONF.register_opts(clusterquota_opts, group='clusterquotas')
 cfg.CONF.register_opts(distributor_opts, group='distributor')
+cfg.CONF.register_opts(bgp_opts, group='bgp')
 
 # Ensure that the control exchange is set correctly
 messaging.set_transport_defaults(control_exchange='octavia')

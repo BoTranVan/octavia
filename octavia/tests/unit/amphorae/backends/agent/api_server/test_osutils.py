@@ -192,6 +192,7 @@ class TestOSUtils(base.TestCase):
 
     def test_write_vip_interface_file(self):
         netns_interface = u'eth1234'
+        dummy_interface = u'dummy0'
         FIXED_IP = u'192.0.2.2'
         SUBNET_CIDR = u'192.0.2.0/24'
         GATEWAY = u'192.51.100.1'
@@ -230,14 +231,15 @@ class TestOSUtils(base.TestCase):
             self.ubuntu_os_util.write_vip_interface_file(
                 interface_file_path=path,
                 primary_interface=netns_interface,
+                secondary_interface=dummy_interface,
                 vip=FIXED_IP,
                 ip=ip,
                 broadcast=broadcast,
                 netmask=netmask,
                 gateway=GATEWAY,
                 mtu=MTU,
-                vrrp_ip=None,
-                vrrp_version=None,
+                auxiliary_ip=None,
+                auxiliary_version=None,
                 render_host_routes=host_routes,
                 template_vip=mock_template)
 
@@ -252,8 +254,8 @@ class TestOSUtils(base.TestCase):
             gateway=GATEWAY,
             network=SUBNET_CIDR,
             mtu=MTU,
-            vrrp_ip=None,
-            vrrp_ipv6=False,
+            auxiliary_ip=None,
+            auxiliary_ipv6=False,
             host_routes=host_routes,
             topology="SINGLE",
         )
@@ -265,14 +267,15 @@ class TestOSUtils(base.TestCase):
             self.ubuntu_os_util.write_vip_interface_file(
                 interface_file_path=path,
                 primary_interface=netns_interface,
+                secondary_interface=dummy_interface,
                 vip=FIXED_IP_IPV6,
                 ip=ipv6,
                 broadcast=broadcastv6,
                 netmask=netmaskv6,
                 gateway=GATEWAY,
                 mtu=MTU,
-                vrrp_ip=None,
-                vrrp_version=None,
+                auxiliary_ip=None,
+                auxiliary_version=None,
                 render_host_routes=host_routes,
                 template_vip=mock_template)
 
@@ -287,10 +290,49 @@ class TestOSUtils(base.TestCase):
             gateway=GATEWAY,
             network=SUBNET_CIDR_IPV6,
             mtu=MTU,
-            vrrp_ip=None,
-            vrrp_ipv6=False,
+            auxiliary_ip=None,
+            auxiliary_ipv6=False,
             host_routes=host_routes,
             topology="SINGLE",
+        )
+
+        # Now test with active-active topology
+        mock_template.reset_mock()
+        conf = self.useFixture(oslo_fixture.Config(config.cfg.CONF))
+        conf.config(group="controller_worker",
+                    loadbalancer_topology="ACTIVE_ACTIVE")
+        with mock.patch('os.open'), mock.patch('os.path'), mock.patch.object(
+                os, 'fdopen', mock_open):
+            self.centos_os_util.write_vip_interface_file(
+                interface_file_path=path,
+                primary_interface=netns_interface,
+                secondary_interface=dummy_interface,
+                vip=FIXED_IP,
+                ip=ip,
+                broadcast=broadcast,
+                netmask=netmask,
+                gateway=GATEWAY,
+                mtu=MTU,
+                auxiliary_ip=None,
+                auxiliary_version=None,
+                render_host_routes=host_routes,
+                template_vip=mock_template)
+
+        mock_template.render.assert_called_once_with(
+            consts=consts,
+            interface=netns_interface,
+            vip=FIXED_IP,
+            vip_ipv6=False,
+            prefix=netmask_prefix,
+            broadcast=broadcast,
+            netmask=netmask,
+            gateway=GATEWAY,
+            network=SUBNET_CIDR,
+            mtu=MTU,
+            auxiliary_ip=None,
+            auxiliary_ipv6=False,
+            host_routes=host_routes,
+            topology="ACTIVE_ACTIVE",
         )
 
     def test_write_port_interface_file(self):

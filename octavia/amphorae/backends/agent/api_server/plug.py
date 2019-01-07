@@ -42,8 +42,12 @@ class Plug(object):
     def __init__(self, osutils):
         self._osutils = osutils
 
-    def plug_vip(self, vip, subnet_cidr, gateway,
-                 mac_address, mtu=None, vrrp_ip=None, host_routes=None):
+    def plug_vip(self, vip, subnet_cidr, gateway, mac_address, mtu=None,
+                 vrrp_ip=None, frontend_ip=None, host_routes=None):
+        auxiliary_ip = vrrp_ip
+        if (CONF.controller_worker.loadbalancer_topology ==
+                consts.TOPOLOGY_ACTIVE_ACTIVE):
+            auxiliary_ip = frontend_ip
         # Validate vip and subnet_cidr, calculate broadcast address and netmask
         try:
             render_host_routes = []
@@ -56,13 +60,13 @@ class Plug(object):
             broadcast = network.broadcast_address.exploded
             netmask = (network.prefixlen if ip.version == 6
                        else network.netmask.exploded)
-            vrrp_version = None
-            if vrrp_ip:
-                vrrp_ip_obj = ipaddress.ip_address(
-                    vrrp_ip if isinstance(vrrp_ip, six.text_type)
-                    else six.u(vrrp_ip)
+            auxiliary_version = None
+            if auxiliary_ip:
+                auxiliary_ip_obj = ipaddress.ip_address(
+                    auxiliary_ip if isinstance(auxiliary_ip, six.text_type)
+                    else six.u(auxiliary_ip)
                 )
-                vrrp_version = vrrp_ip_obj.version
+                auxiliary_version = auxiliary_ip_obj.version
             if host_routes:
                 for hr in host_routes:
                     network = ipaddress.ip_network(
@@ -90,6 +94,10 @@ class Plug(object):
         secondary_interface = "{interface}:0".format(
             interface=primary_interface)
 
+        if (CONF.controller_worker.loadbalancer_topology ==
+                consts.TOPOLOGY_ACTIVE_ACTIVE):
+            secondary_interface = consts.NETNS_DUMMY_INTERFACE
+
         interface_file_path = self._osutils.get_network_interface_file(
             primary_interface)
 
@@ -99,14 +107,15 @@ class Plug(object):
         self._osutils.write_vip_interface_file(
             interface_file_path=interface_file_path,
             primary_interface=primary_interface,
+            secondary_interface=secondary_interface,
             vip=vip,
             ip=ip,
             broadcast=broadcast,
             netmask=netmask,
             gateway=gateway,
             mtu=mtu,
-            vrrp_ip=vrrp_ip,
-            vrrp_version=vrrp_version,
+            auxiliary_ip=auxiliary_ip,
+            auxiliary_version=auxiliary_version,
             render_host_routes=render_host_routes)
 
         # Update the list of interfaces to add to the namespace
@@ -146,6 +155,18 @@ class Plug(object):
             idx = ipr.link_lookup(ifname=default_netns_interface)[0]
             ipr.link('set', index=idx, net_ns_fd=consts.AMPHORA_NAMESPACE,
                      IFLA_IFNAME=primary_interface)
+            if (CONF.controller_worker.loadbalancer_topology ==
+                    consts.TOPOLOGY_ACTIVE_ACTIVE):
+                if not ipr.link_lookup(ifname=secondary_interface):
+                    try:
+                        ipr.link('add', ifname=secondary_interface,
+                                 kind="dummy")
+                    except Exception:
+                        pass
+                dummp_idx = ipr.link_lookup(ifname=secondary_interface)[0]
+                ipr.link('set', index=dummp_idx,
+                         net_ns_fd=consts.AMPHORA_NAMESPACE,
+                         IFLA_IFNAME=secondary_interface)
 
         # In an ha amphora, keepalived should bring the VIP interface up
         if (CONF.controller_worker.loadbalancer_topology ==

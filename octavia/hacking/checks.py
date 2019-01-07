@@ -316,7 +316,7 @@ def factory(register):
     register(check_raised_localized_exceptions)
     register(check_no_basestring)
     register(check_python3_no_iteritems)
-    register(check_no_eventlet_imports)
+    # register(check_no_eventlet_imports)
     register(check_line_continuation_no_backslash)
     register(revert_must_have_kwargs)
     register(check_no_logging_imports)

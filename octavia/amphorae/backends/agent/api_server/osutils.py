@@ -94,9 +94,9 @@ class BaseOS(object):
             symlinks=True,
             ignore=ignore)
 
-    def write_vip_interface_file(self, interface_file_path,
-                                 primary_interface, vip, ip, broadcast,
-                                 netmask, gateway, mtu, vrrp_ip, vrrp_version,
+    def write_vip_interface_file(self, interface_file_path, interface,
+                                 vip, ip, broadcast, netmask, gateway, mtu,
+                                 auxiliary_ip, auxiliary_version,
                                  render_host_routes, template_vip):
         # write interface file
 
@@ -114,7 +114,7 @@ class BaseOS(object):
                        'w') as text_file:
             text = template_vip.render(
                 consts=consts,
-                interface=primary_interface,
+                interface=interface,
                 vip=vip,
                 vip_ipv6=ip.version == 6,
                 # For ipv6 the netmask is already the prefix
@@ -125,8 +125,8 @@ class BaseOS(object):
                 gateway=gateway,
                 network=utils.ip_netmask_to_cidr(vip, netmask),
                 mtu=mtu,
-                vrrp_ip=vrrp_ip,
-                vrrp_ipv6=vrrp_version == 6,
+                auxiliary_ip=auxiliary_ip,
+                auxiliary_ipv6=auxiliary_version == 6,
                 host_routes=render_host_routes,
                 topology=CONF.controller_worker.loadbalancer_topology,
             )
@@ -243,6 +243,7 @@ class Ubuntu(BaseOS):
 
     ETH_X_PORT_CONF = 'plug_port_ethX.conf.j2'
     ETH_X_VIP_CONF = 'plug_vip_ethX.conf.j2'
+    DUMMY_X_VIP_CONF = 'plug_vip_dummyX.conf.j2'
 
     @classmethod
     def is_os_name(cls, os_name):
@@ -294,16 +295,24 @@ class Ubuntu(BaseOS):
                                'interfaces.d/*.cfg\n'.format(
                                    consts.AMPHORA_NAMESPACE))
 
-    def write_vip_interface_file(self, interface_file_path,
-                                 primary_interface, vip, ip, broadcast,
-                                 netmask, gateway, mtu, vrrp_ip, vrrp_version,
-                                 render_host_routes, template_vip=None):
+    def write_vip_interface_file(self, interface_file_path, primary_interface,
+                                 secondary_interface, vip, ip, broadcast,
+                                 netmask, gateway, mtu, auxiliary_ip,
+                                 auxiliary_version, render_host_routes,
+                                 template_vip=None):
         if not template_vip:
             template_vip = j2_env.get_template(self.ETH_X_VIP_CONF)
-        super(Ubuntu, self).write_vip_interface_file(
-            interface_file_path, primary_interface, vip, ip, broadcast,
-            netmask, gateway, mtu, vrrp_ip, vrrp_version, render_host_routes,
-            template_vip)
+        if (CONF.controller_worker.loadbalancer_topology ==
+                consts.TOPOLOGY_ACTIVE_ACTIVE):
+            super(Ubuntu, self).write_vip_interface_file(
+                interface_file_path, secondary_interface, vip, ip, broadcast,
+                netmask, gateway, mtu, auxiliary_ip, auxiliary_version,
+                render_host_routes, template_vip)
+        else:
+            super(Ubuntu, self).write_vip_interface_file(
+                interface_file_path, primary_interface, vip, ip, broadcast,
+                netmask, gateway, mtu, auxiliary_ip, auxiliary_version,
+                render_host_routes, template_vip)
 
     def write_port_interface_file(self, netns_interface, fixed_ips, mtu,
                                   interface_file_path=None,
@@ -328,6 +337,7 @@ class RH(BaseOS):
     ETH_X_ALIAS_VIP_CONF = 'rh_plug_vip_ethX_alias.conf.j2'
     ROUTE_ETH_X_CONF = 'rh_route_ethX.conf.j2'
     RULE_ETH_X_CONF = 'rh_rule_ethX.conf.j2'
+    DUMMY_X_VIP_CONF = 'rh_plug_vip_dummyX.conf.j2'
     # The reason of make them as jinja templates is the current scripts force
     # to add the iptables, so leave it now for future extending if possible.
     ETH_IFUP_LOCAL_SCRIPT = 'rh_plug_port_eth_ifup_local.conf.j2'
@@ -353,6 +363,9 @@ class RH(BaseOS):
 
     def get_alias_network_interface_file(self, interface):
         return self.get_network_interface_file(interface + ':0')
+
+    def get_dummy_network_interface_file(self, interface):
+        return self.get_network_interface_file(interface)
 
     def get_static_routes_interface_file(self, interface):
         return self.get_network_interface_file('route-' + interface)
@@ -392,15 +405,16 @@ class RH(BaseOS):
         return
 
     def write_vip_interface_file(self, interface_file_path,
-                                 primary_interface, vip, ip, broadcast,
-                                 netmask, gateway, mtu, vrrp_ip, vrrp_version,
+                                 primary_interface, secondary_interface,
+                                 vip, ip, broadcast, netmask, gateway,
+                                 mtu, auxiliary_ip, auxiliary_version,
                                  render_host_routes, template_vip=None):
         if not template_vip:
             template_vip = j2_env.get_template(self.ETH_X_VIP_CONF)
         super(RH, self).write_vip_interface_file(
             interface_file_path, primary_interface, vip, ip, broadcast,
-            netmask, gateway, mtu, vrrp_ip, vrrp_version, render_host_routes,
-            template_vip)
+            netmask, gateway, mtu, auxiliary_ip, auxiliary_version,
+            render_host_routes, template_vip)
 
         # keepalived will handle the VIP if we are on active/standby
         if (ip.version == 4 and
@@ -412,8 +426,19 @@ class RH(BaseOS):
             template_vip_alias = j2_env.get_template(self.ETH_X_ALIAS_VIP_CONF)
             super(RH, self).write_vip_interface_file(
                 alias_interface_file_path, primary_interface, vip, ip,
-                broadcast, netmask, gateway, mtu, vrrp_ip, vrrp_version,
-                render_host_routes, template_vip_alias)
+                broadcast, netmask, gateway, mtu, auxiliary_ip,
+                auxiliary_version, render_host_routes, template_vip_alias)
+
+        if (ip.version == 4 and
+            CONF.controller_worker.loadbalancer_topology ==
+                consts.TOPOLOGY_ACTIVE_ACTIVE):
+            dummy_interface_file_path = self.get_dummy_network_interface_file(
+                secondary_interface)
+            template_vip_dummy = j2_env.get_template(self.DUMMY_X_VIP_CONF)
+            super(RH, self).write_vip_interface_file(
+                dummy_interface_file_path, secondary_interface, vip, ip,
+                broadcast, netmask, gateway, mtu, auxiliary_ip,
+                auxiliary_version, render_host_routes, template_vip_dummy)
 
         routes_interface_file_path = (
             self.get_static_routes_interface_file(primary_interface))

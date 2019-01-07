@@ -20,28 +20,28 @@ ONBOOT="yes"
 TYPE="Ethernet"
 USERCTL="yes"
 
-{%- if vrrp_ip %}
-{%- if vrrp_ipv6 %}
+{%- if auxiliary_ip %}
+{%- if auxiliary_ipv6 %}
 IPV6INIT="yes"
 IPV6_DEFROUTE="yes"
 IPV6_AUTOCONF="no"
-IPV6ADDR="{{ vrrp_ip }}/{{ prefix }}"
+IPV6ADDR="{{ auxiliary_ip }}/{{ prefix }}"
 {%- if gateway %}
 IPV6_DEFAULTGW="{{ gateway }}"
 {%- endif %}
 {%- if mtu %}
 IPV6_MTU="{{ mtu }}"
 {%- endif %}
-{%- else %} {# not vrrp_ipv6 #}
+{%- else %} {# not auxiliary_ipv6 #}
 BOOTPROTO="static"
-IPADDR="{{ vrrp_ip }}"
+IPADDR="{{ auxiliary_ip }}"
 NETMASK="{{ netmask }}"
 {%- if gateway %}
 GATEWAY="{{ gateway }}"
 {%- endif %}
 MTU="{{ mtu }}"
-{%- endif %} {# end if vrrp_ipv6 #}
-{%- else %} {# not vrrp_ip #}
+{%- endif %} {# end if auxiliary_ipv6 #}
+{%- else %} {# not auxiliary_ip #}
 {%- if vip_ipv6 %}
 IPV6INIT="yes"
 IPV6_DEFROUTE="yes"
@@ -50,7 +50,7 @@ IPV6_AUTOCONF="yes"
 BOOTPROTO="dhcp"
 PERSISTENT_DHCLIENT="1"
 {%- endif %} {# end if vip_ipv6 #}
-{%- endif %} {# end if vrrp_ip #}
+{%- endif %} {# end if auxiliary_ip #}
 
 {%- if vip_ipv6 %}
 IPV6ADDR_SECONDARIES="{{ vip }}/{{ prefix }}"

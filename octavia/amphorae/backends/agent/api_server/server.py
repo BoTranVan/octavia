@@ -24,6 +24,7 @@ from werkzeug import exceptions
 
 from octavia.amphorae.backends.agent import api_server
 from octavia.amphorae.backends.agent.api_server import amphora_info
+from octavia.amphorae.backends.agent.api_server import bgp_base
 from octavia.amphorae.backends.agent.api_server import certificate_update
 from octavia.amphorae.backends.agent.api_server import keepalived
 from octavia.amphorae.backends.agent.api_server import listener
@@ -59,6 +60,7 @@ class Server(object):
         self._listener = listener.Listener()
         self._udp_listener = (udp_listener_base.UdpListenerApiServerBase.
                               get_server_driver())
+        self._bgpserver = bgp_base.BgpServer.get_bgpserver()
         self._plug = plug.Plug(self._osutils)
         self._amphora_info = amphora_info.AmphoraInfo(self._osutils)
 
@@ -133,6 +135,37 @@ class Server(object):
                               view_func=self.get_interface,
                               methods=['GET'])
 
+        self.app.add_url_rule(rule=PATH_PREFIX + '/bgp/upload',
+                              view_func=self.upload_bgp_config,
+                              methods=['PUT'])
+        self.app.add_url_rule(rule=PATH_PREFIX + '/bgp/<action>',
+                              view_func=self.manage_service_bgp,
+                              methods=['PUT'])
+        self.app.add_url_rule(rule=PATH_PREFIX + '/bgp/register_amphora',
+                              view_func=self.bgp_register_amphora,
+                              methods=['PUT'])
+        self.app.add_url_rule(rule=PATH_PREFIX + '/bgp/unregister_amphora',
+                              view_func=self.bgp_unregister_amphora,
+                              methods=['PUT'])
+        self.app.add_url_rule(rule=PATH_PREFIX + '/bgp/status',
+                              view_func=self.get_bgpserver_status,
+                              methods=['GET'])
+
+    def upload_bgp_config(self):
+        return self._bgpserver.upload_bgp_config()
+
+    def manage_service_bgp(self, action):
+        return self._bgpserver.manage_bgp_speaker(action)
+
+    def bgp_register_amphora(self):
+        return self._bgpserver.register_amphora()
+
+    def bgp_unregister_amphora(self):
+        return self._bgpserver.unregister_amphora()
+
+    def get_bgpserver_status(self):
+        return self._bgpserver.get_status()
+
     def upload_haproxy_config(self, amphora_id, listener_id):
         return self._listener.upload_haproxy_config(amphora_id, listener_id)
 
@@ -203,6 +236,7 @@ class Server(object):
                                    net_info['mac_address'],
                                    net_info.get('mtu'),
                                    net_info.get('vrrp_ip'),
+                                   net_info.get('frontend_ip'),
                                    net_info.get('host_routes'))
 
     def plug_network(self):

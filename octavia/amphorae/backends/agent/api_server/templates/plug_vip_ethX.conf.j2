@@ -20,9 +20,9 @@ auto {{ interface }} {{ interface }}:0
 {%- else %}
 auto {{ interface }}
 {%- endif %}
-{%- if vrrp_ip %}
-iface {{ interface }} inet{{ '6' if vrrp_ipv6 }} static
-address {{ vrrp_ip }}
+{%- if auxiliary_ip %}
+iface {{ interface }} inet{{ '6' if auxiliary_ipv6 }} static
+address {{ auxiliary_ip }}
 broadcast {{ broadcast }}
 netmask {{ netmask }}
 {%- if gateway %}
