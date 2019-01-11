@@ -2081,3 +2081,36 @@ class FlavorProfileRepository(BaseRepository):
 
 class DistributorRepository(BaseRepository):
     model_class = models.Distributor
+
+    def test_and_set_provisioning_status(self, session, id, status,
+                                         raise_exception=False):
+        """Tests and sets a distributor and provisioning status.
+
+        Puts a lock on the distributor table to check the status of a
+        distributor.  If the status is ACTIVE then the status of the
+        distributor is updated and the method returns True.  If the
+        status is not ACTIVE, then nothing is done and False is returned.
+
+        :param session: A Sql Alchemy database session.
+        :param id: id of Distributor
+        :param status: Status to set Distributor if check passes.
+        :param raise_exception: If True, raise ImmutableObject on failure
+        :returns: bool
+        """
+        with session.begin(subtransactions=True):
+            distributor = session.query(
+                self.model_class).with_for_update().filter_by(
+                    id=id).one()
+            is_delete = status == consts.PENDING_DELETE
+            acceptable_statuses = (
+                consts.DELETABLE_STATUSES
+                if is_delete else consts.MUTABLE_STATUSES
+            )
+            if distributor.provisioning_status not in acceptable_statuses:
+                if raise_exception:
+                    raise exceptions.ImmutableObject(
+                        resource='Distributor', id=id)
+                return False
+            distributor.provisioning_status = status
+            session.add(distributor)
+            return True

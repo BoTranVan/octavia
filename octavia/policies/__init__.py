@@ -16,6 +16,7 @@ import itertools
 from octavia.policies import amphora
 from octavia.policies import base
 from octavia.policies import clusterquota
+from octavia.policies import distributor
 from octavia.policies import flavor
 from octavia.policies import flavor_profile
 from octavia.policies import healthmonitor
@@ -46,6 +47,7 @@ def list_rules():
         provider.list_rules(),
         quota.list_rules(),
         clusterquota.list_rules(),
+        distributor.list_rules(),
         amphora.list_rules(),
         usage.list_rules(),
         provider_flavor.list_rules(),

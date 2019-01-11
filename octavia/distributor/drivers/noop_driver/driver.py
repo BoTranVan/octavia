@@ -96,11 +96,24 @@ class NoopManager(object):
                                                   'amphorae')))
         return unregister_amphorae_flow
 
+    @classmethod
+    def validate_config_data(cls, metadata_dict):
+        LOG.debug('Distributor %s validate_config_data',
+                  cls.__name__)
+        unregister_amphorae_flow = linear_flow.Flow('validate_config_data')
+        unregister_amphorae_flow.add(NoopProvidesRequiresTask(
+            'validate_config_data_task', requires=('metadata_dict')))
+        return unregister_amphorae_flow
+
 
 class NoopDistributorDriver(driver_base.DistributorDriver):
     def __init__(self):
         super(NoopDistributorDriver, self).__init__()
         self.driver = NoopManager()
+
+    @classmethod
+    def validate_config_data(cls, metadata_dict):
+        NoopManager.validate_config_data(metadata_dict)
 
     def get_create_distributor_subflow(self):
         return self.driver.get_create_distributor_subflow()

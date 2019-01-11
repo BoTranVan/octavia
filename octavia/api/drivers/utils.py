@@ -384,6 +384,19 @@ def l7rule_dict_to_provider_dict(l7rule_dict):
     return new_l7rule_dict
 
 
+def db_distributor_to_provider_distributor(db_distributor):
+    new_distributor_dict = distributor_dict_to_provider_dict(
+        db_distributor.to_dict())
+    return driver_dm.Distributor.from_dict(new_distributor_dict)
+
+
+def distributor_dict_to_provider_dict(distributor_dict):
+    new_distributor_dict = _base_to_provider_dict(distributor_dict)
+    new_distributor_dict['distributor_id'] = new_distributor_dict.pop('id')
+    new_distributor_dict.pop('load_balancers', None)
+    return new_distributor_dict
+
+
 def vip_dict_to_provider_dict(vip_dict):
     new_vip_dict = {}
     if 'ip_address' in vip_dict:

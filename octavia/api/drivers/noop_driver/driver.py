@@ -241,6 +241,31 @@ class NoopManager(object):
         flavor_hash = hash(frozenset(flavor_metadata))
         self.driverconfig[flavor_hash] = (flavor_metadata, 'validate_flavor')
 
+    # Distributor
+    def distributor_create(self, distributor):
+        LOG.debug('Provider %s no-op, distributor_create distributor %s',
+                  self.__class__.__name__, distributor.distributor_id)
+
+        self.driverconfig[distributor.distributor_id] = (
+            distributor, 'distributor_create')
+
+    def distributor_delete(self, distributor):
+        distributor_id = distributor.distributor_id
+        LOG.debug('Provider %s no-op, distributor_delete distributor %s',
+                  self.__class__.__name__, distributor_id)
+
+        self.driverconfig[distributor_id] = (
+            distributor_id, 'distributor_delete')
+
+    def distributor_update(self, old_distributor, new_distributor):
+        LOG.debug('Provider %s no-op, distributor_update distributor %s. '
+                  'old: %s. new: %s',
+                  self.__class__.__name__, new_distributor.distributor_id,
+                  old_distributor.to_dict(), new_distributor.to_dict())
+
+        self.driverconfig[new_distributor.distributor_id] = (
+            new_distributor, 'distributor_update')
+
 
 class NoopProviderDriver(driver_base.ProviderDriver):
     def __init__(self):
@@ -333,3 +358,13 @@ class NoopProviderDriver(driver_base.ProviderDriver):
 
     def validate_flavor(self, flavor_metadata):
         self.driver.validate_flavor(flavor_metadata)
+
+    # Distributor
+    def distributor_create(self, distributor):
+        self.driver.distributor_create(distributor)
+
+    def distributor_delete(self, distributor):
+        self.driver.distributor_delete(distributor)
+
+    def distributor_update(self, old_distributor, new_distributor):
+        self.driver.distributor_update(old_distributor, new_distributor)

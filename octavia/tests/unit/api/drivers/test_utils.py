@@ -263,6 +263,13 @@ class TestUtils(base.TestCase):
         self.assertEqual(self.sample_data.provider_l7rule1_dict,
                          provider_rules_dict)
 
+    def test_db_distributor_to_provider_distributor(self):
+        provider_distributor = utils.db_distributor_to_provider_distributor(
+            self.sample_data.db_distributor)
+        ref_privider_distributor = driver_dm.Distributor(
+            **self.sample_data.provider_distributor_dict)
+        self.assertEqual(provider_distributor, ref_privider_distributor)
+
     def test_vip_dict_to_provider_dict(self):
         new_vip_dict = utils.vip_dict_to_provider_dict(
             self.sample_data.test_vip_dict)

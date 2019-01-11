@@ -101,6 +101,27 @@ class AmphoraProviderDriver(driver_base.ProviderDriver):
                    consts.LOAD_BALANCER_UPDATES: lb_dict}
         self.client.cast({}, 'update_load_balancer', **payload)
 
+    # Distributor
+    def distributor_create(self, distributor):
+        payload = {consts.DISTRIBUTOR_ID: distributor.distributor_id}
+        self.client.cast({}, 'create_distributor', **payload)
+
+    def distributor_delete(self, distributor):
+        distributor_id = distributor.distributor_id
+        payload = {consts.DISTRIBUTOR_ID: distributor_id}
+        self.client.cast({}, 'delete_distributor', **payload)
+
+    def distributor_update(self, old_distributor, new_distributor):
+        distributor_dict = new_distributor.to_dict()
+        if 'admin_state_up' in distributor_dict:
+            distributor_dict['enabled'] = distributor_dict.pop(
+                'admin_state_up')
+        distributor_id = distributor_dict.pop('distributor_id')
+
+        payload = {consts.DISTRIBUTOR_ID: distributor_id,
+                   consts.DISTRIBUUTOR_UPDATES: distributor_dict}
+        self.client.cast({}, 'update_distributor', **payload)
+
     # Listener
     def listener_create(self, listener):
         payload = {consts.LISTENER_ID: listener.listener_id}

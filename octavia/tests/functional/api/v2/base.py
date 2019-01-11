@@ -89,6 +89,9 @@ class BaseAPITest(base_db_test.OctaviaDBTestBase):
     USAGE_PATH = '/lbaas/usage'
     USAGE_PROJECT_PATH = USAGE_PATH + '/{project_id}'
 
+    DISTRIBUTORS_PATH = '/lbaas/distributors'
+    DISTRIBUTOR_PATH = DISTRIBUTORS_PATH + '/{distributor_id}'
+
     NOT_AUTHORIZED_BODY = {
         'debuginfo': None, 'faultcode': 'Client',
         'faultstring': 'Policy does not allow this request to be performed.'}
@@ -119,6 +122,7 @@ class BaseAPITest(base_db_test.OctaviaDBTestBase):
         self.amphora_repo = repositories.AmphoraRepository()
         self.flavor_repo = repositories.FlavorRepository()
         self.flavor_profile_repo = repositories.FlavorProfileRepository()
+        self.distributor_repo = repositories.DistributorRepository()
         patcher2 = mock.patch('octavia.certificates.manager.barbican.'
                               'BarbicanCertManager')
         self.cert_manager_mock = patcher2.start()
@@ -362,6 +366,17 @@ class BaseAPITest(base_db_test.OctaviaDBTestBase):
         path = self.QUOTA_PATH.format(project_id=project_id)
         response = self.put(path, body, status=202)
         return response.json
+
+    def create_distributor(self, name, distributor_driver,
+                           frontend_subnet, config_data,
+                           **optionals):
+        req_dict = {'name': name, 'distributor_driver': distributor_driver,
+                    'frontend_subnet': frontend_subnet,
+                    'config_data': config_data}
+        req_dict.update(optionals)
+        body = {'distributor': req_dict}
+        response = self.post(self.DISTRIBUTORS_PATH, body)
+        return response.json.get('distributor')
 
     def set_clusterquota(self,
                          cluster_total_loadbalancers=None,

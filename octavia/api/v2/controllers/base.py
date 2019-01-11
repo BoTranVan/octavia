@@ -89,6 +89,12 @@ class BaseController(rest.RestController):
                                 data_models.Pool, id,
                                 show_deleted=show_deleted)
 
+    def _get_db_distributor(self, session, id, show_deleted=True):
+        """Get a distributor from the database."""
+        return self._get_db_obj(session, self.repositories.distributor,
+                                data_models.Distributor, id,
+                                show_deleted=show_deleted)
+
     def _get_db_member(self, session, id, show_deleted=True):
         """Get a member from the database."""
         return self._get_db_obj(session, self.repositories.member,

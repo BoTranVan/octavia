@@ -182,6 +182,11 @@ class LBPendingStateError(APIException):
     code = 409
 
 
+class DistributorPendingStateError(APIException):
+    msg = _("Invalid state %(state)s of distributor resource %(id)s")
+    code = 409
+
+
 class TooManyL7RulesOnL7Policy(APIException):
     msg = _("Too many rules on L7 policy %(id)s")
     code = 409
@@ -392,3 +397,9 @@ class ObjectInUse(APIException):
 class ProviderFlavorMismatchError(APIException):
     msg = _("Flavor '%(flav)s' is not compatible with provider '%(prov)s'")
     code = 400
+
+
+class UnsupportUpdateConfigData(APIException):
+    msg = _("'config_data' cannot be updated, "
+            "because the distributor is in use.")
+    code = 409

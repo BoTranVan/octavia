@@ -249,6 +249,7 @@ MEMBER_UPDATES = 'member_updates'
 HEALTH_MONITOR_UPDATES = 'health_monitor_updates'
 L7POLICY_UPDATES = 'l7policy_updates'
 L7RULE_UPDATES = 'l7rule_updates'
+DISTRIBUTOR_UPDATES = 'distributor_updates'
 TIMEOUT_DICT = 'timeout_dict'
 REQ_CONN_TIMEOUT = 'req_conn_timeout'
 REQ_READ_TIMEOUT = 'req_read_timeout'
@@ -545,6 +546,7 @@ RBAC_PROVIDER = '{}:provider:'.format(LOADBALANCER_API)
 RBAC_PROVIDER_FLAVOR = '{}:provider-flavor:'.format(LOADBALANCER_API)
 RBAC_FLAVOR = '{}:flavor:'.format(LOADBALANCER_API)
 RBAC_FLAVOR_PROFILE = '{}:flavor-profile:'.format(LOADBALANCER_API)
+RBAC_DISTRIBUTOR = '{}:distributor:'.format(LOADBALANCER_API)
 RBAC_POST = 'post'
 RBAC_PUT = 'put'
 RBAC_PUT_CONFIG = 'put_config'
@@ -578,3 +580,6 @@ FLAVOR_DATA = 'flavor_data'
 # Flavor metadata
 LOADBALANCER_TOPOLOGY = 'loadbalancer_topology'
 COMPUTE_FLAVOR = 'compute_flavor'
+
+# Distributor
+CONFIG_DATA = 'config_data'

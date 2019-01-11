@@ -24,6 +24,7 @@ from sqlalchemy.sql import func
 
 from octavia.api.v2.types import amphora
 from octavia.api.v2.types import clusterquotas
+from octavia.api.v2.types import distributor
 from octavia.api.v2.types import flavor_profile
 from octavia.api.v2.types import flavors
 from octavia.api.v2.types import health_monitor
@@ -806,6 +807,8 @@ class Distributor(base_models.BASE, base_models.IdMixin,
         sa.UniqueConstraint('name',
                             name='uq_distributor_name'),
     )
+
+    __v2_wsme__ = distributor.DistributorResponse
 
     description = sa.Column(sa.String(255), nullable=True)
     frontend_subnet = sa.Column(sa.String(36), nullable=False)

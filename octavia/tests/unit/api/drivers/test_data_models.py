@@ -32,6 +32,8 @@ class TestProviderDataModels(base.TestCase):
         self.vip_port_id = uuidutils.generate_uuid()
         self.vip_subnet_id = uuidutils.generate_uuid()
         self.listener_id = uuidutils.generate_uuid()
+        self.distributor_id = uuidutils.generate_uuid()
+        self.frontend_subnet_id = uuidutils.generate_uuid()
         self.vip_qos_policy_id = uuidutils.generate_uuid()
         self.default_tls_container_ref = uuidutils.generate_uuid()
         self.sni_container_ref_1 = uuidutils.generate_uuid()
@@ -68,6 +70,24 @@ class TestProviderDataModels(base.TestCase):
             vip_port_id=self.vip_port_id,
             vip_subnet_id=self.vip_subnet_id,
             vip_qos_policy_id=self.vip_qos_policy_id)
+
+        self.ref_distributor = data_models.Distributor(
+            admin_state_up=False,
+            name='test_distributor',
+            description='One great distributor',
+            frontend_subnet=self.frontend_subnet_id,
+            distributor_driver='l3',
+            distributor_id=self.distributor_id,
+            config_data='{"cake": "chocolate"}')
+
+        self.ref_distributor_dict = {
+            'admin_state_up': True,
+            'name': 'test_distributor',
+            'description': 'One great distributor',
+            'frontend_subnet': self.frontend_subnet_id,
+            'distributor_driver': 'l3',
+            'distributor_id': self.distributor_id,
+            'config_data': '{"cake": "chocolate"}'}
 
         self.ref_lb_dict = {'project_id': self.project_id,
                             'flavor': {'cake': 'chocolate'},

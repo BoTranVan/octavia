@@ -60,6 +60,14 @@ def create_load_balancer_tree(lb_dict):
     return prepped_lb
 
 
+def create_distributor(distributor_dict):
+    if not distributor_dict.get('id'):
+        distributor_dict['id'] = uuidutils.generate_uuid()
+    distributor_dict[constants.PROVISIONING_STATUS] = constants.PENDING_CREATE
+    distributor_dict[constants.OPERATING_STATUS] = constants.OFFLINE
+    return distributor_dict
+
+
 def create_load_balancer(lb_dict):
     if not lb_dict.get('id'):
         lb_dict['id'] = uuidutils.generate_uuid()

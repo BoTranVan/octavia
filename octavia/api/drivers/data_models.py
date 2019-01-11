@@ -260,3 +260,18 @@ class VIP(BaseDataModel):
         self.vip_port_id = vip_port_id
         self.vip_subnet_id = vip_subnet_id
         self.vip_qos_policy_id = vip_qos_policy_id
+
+
+class Distributor(BaseDataModel):
+    def __init__(self, admin_state_up=Unset, name=Unset,
+                 description=Unset, frontend_subnet=Unset,
+                 distributor_driver=Unset, distributor_id=Unset,
+                 config_data=Unset):
+
+        self.admin_state_up = admin_state_up
+        self.name = name
+        self.description = description
+        self.frontend_subnet = frontend_subnet
+        self.distributor_driver = distributor_driver
+        self.distributor_id = distributor_id
+        self.config_data = config_data

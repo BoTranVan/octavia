@@ -55,6 +55,8 @@ class SampleDriverDataModels(object):
         self.l7rule1_id = uuidutils.generate_uuid()
         self.l7rule2_id = uuidutils.generate_uuid()
 
+        self.distributor_id = uuidutils.generate_uuid()
+
         self._common_test_dict = {'provisioning_status': constants.ACTIVE,
                                   'operating_status': constants.ONLINE,
                                   'project_id': self.project_id,
@@ -473,3 +475,27 @@ class SampleDriverDataModels(object):
             port_id=self.port_id,
             subnet_id=self.subnet_id,
             qos_policy_id=self.qos_policy_id)
+
+        # Setup Distributor
+        self.test_distributor_dict = {
+            'id': self.distributor_id,
+            'name': 'distributor1',
+            'description': 'distributor 1',
+            'frontend_subnet': self.subnet_id,
+            'distributor_driver': 'l3',
+            'provisioning_status': constants.ACTIVE,
+            'operating_status': constants.ONLINE,
+            'enabled': True,
+            'config_data': '{"cake": "chocolate"}'}
+
+        self.provider_distributor_dict = {
+            'distributor_id': self.distributor_id,
+            'name': 'distributor1',
+            'description': 'distributor 1',
+            'frontend_subnet': self.subnet_id,
+            'distributor_driver': 'l3',
+            'admin_state_up': True,
+            'config_data': '{"cake": "chocolate"}'}
+
+        self.db_distributor = data_models.Distributor(
+            **self.test_distributor_dict)

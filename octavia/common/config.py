@@ -630,6 +630,14 @@ clusterquota_opts = [
                help=_("Maximum number of healthmonitors per pool")),
 ]
 
+distributor_opts = [
+    cfg.StrOpt('api_driver', default='noop_driver',
+               choices=['amphora', 'noop_driver'],
+               help=_("The api driver of distibutor. Only support 'amphora' "
+                      "and 'noop_driver'. The 'noop_driver' just only for "
+                      "test octavia distributor api. This option should set "
+                      "as 'amphora' in production environment")),
+]
 
 # Register the configuration options
 cfg.CONF.register_opts(core_opts)
@@ -651,7 +659,7 @@ cfg.CONF.register_opts(glance_opts, group='glance')
 cfg.CONF.register_opts(neutron_opts, group='neutron')
 cfg.CONF.register_opts(quota_opts, group='quotas')
 cfg.CONF.register_opts(clusterquota_opts, group='clusterquotas')
-
+cfg.CONF.register_opts(distributor_opts, group='distributor')
 
 # Ensure that the control exchange is set correctly
 messaging.set_transport_defaults(control_exchange='octavia')
