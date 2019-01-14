@@ -43,6 +43,7 @@ VRRP_PORT_ID = uuidutils.generate_uuid()
 HA_PORT_ID = uuidutils.generate_uuid()
 L7POLICY_ID = uuidutils.generate_uuid()
 L7RULE_ID = uuidutils.generate_uuid()
+DISTRIBUTOR_ID = uuidutils.generate_uuid()
 VIP_IP = '192.0.5.2'
 VRRP_IP = '192.0.5.3'
 HA_IP = '192.0.5.4'
@@ -82,6 +83,8 @@ _vip_mock.port_id = PORT_ID
 _vip_mock.subnet_id = SUBNET_ID
 _vip_mock.ip_address = VIP_IP
 _vrrp_group_mock = mock.MagicMock()
+_distributor_mock = mock.MagicMock()
+_distributor_mock.id = DISTRIBUTOR_ID
 _cert_mock = mock.MagicMock()
 _pem_mock = """Junk
 -----BEGIN CERTIFICATE-----
@@ -160,6 +163,9 @@ class TestDatabaseTasks(base.TestCase):
         self.l7rule_mock = mock.MagicMock()
         self.l7rule_mock.id = L7RULE_ID
         self.l7rule_mock.l7policy = self.l7policy_mock
+
+        self.distributor_mock = mock.MagicMock()
+        self.distributor_mock.id = DISTRIBUTOR_ID
 
         super(TestDatabaseTasks, self).setUp()
 
@@ -2734,3 +2740,222 @@ class TestDatabaseTasks(base.TestCase):
             'TEST',
             POOL_ID,
             operating_status=constants.ONLINE)
+
+    @mock.patch('octavia.db.repositories.DistributorRepository.delete')
+    def test_delete_distributor_in_db(self,
+                                      mock_pool_repo_delete,
+                                      mock_generate_uuid,
+                                      mock_LOG,
+                                      mock_get_session,
+                                      mock_loadbalancer_repo_update,
+                                      mock_listener_repo_update,
+                                      mock_amphora_repo_update,
+                                      mock_distributor_repo_delete):
+
+        delete_distributor = database_tasks.DeleteDistributorInDB()
+        delete_distributor.execute(_distributor_mock)
+
+        repo.DistributorRepository.delete.assert_called_once_with(
+            'TEST',
+            id=DISTRIBUTOR_ID)
+
+        # Test the revert
+
+        mock_distributor_repo_delete.reset_mock()
+        delete_distributor.revert(_distributor_mock)
+
+    @mock.patch('octavia.db.repositories.DistributorRepository.update')
+    def test_update_distributor_in_db(self,
+                                      mock_distributor_repo_update,
+                                      mock_generate_uuid,
+                                      mock_LOG,
+                                      mock_get_session,
+                                      mock_loadbalancer_repo_update,
+                                      mock_listener_repo_update,
+                                      mock_amphora_repo_update,
+                                      mock_amphora_repo_delete):
+
+        update_distributor = database_tasks.UpdateDistributorInDB()
+        update_distributor.execute(self.distributor_mock,
+                                   {'name': 'test1'})
+
+        repo.DistributorRepository.update.assert_called_once_with(
+            'TEST', DISTRIBUTOR_ID, name='test1')
+
+        # Test the revert
+        mock_distributor_repo_update.reset_mock()
+        update_distributor.revert(self.distributor_mock)
+
+        repo.DistributorRepository.update.assert_called_once_with(
+            'TEST',
+            DISTRIBUTOR_ID,
+            provisioning_status=constants.ERROR)
+
+        # Test the revert
+        mock_distributor_repo_update.reset_mock()
+        mock_distributor_repo_update.side_effect = Exception('fail')
+        update_distributor.revert(self.distributor_mock)
+
+        repo.DistributorRepository.update.assert_called_once_with(
+            'TEST',
+            DISTRIBUTOR_ID,
+            provisioning_status=constants.ERROR)
+
+    @mock.patch('octavia.db.repositories.DistributorRepository.update')
+    def test_mark_distributor_active_in_db(self,
+                                           mock_distributor_repo_update,
+                                           mock_generate_uuid,
+                                           mock_LOG,
+                                           mock_get_session,
+                                           mock_loadbalancer_repo_update,
+                                           mock_listener_repo_update,
+                                           mock_amphora_repo_update,
+                                           mock_amphora_repo_delete):
+
+        mark_distributor_active = (database_tasks.MarkDistributorActiveInDB())
+        mark_distributor_active.execute(self.distributor_mock)
+
+        mock_distributor_repo_update.assert_called_once_with(
+            'TEST',
+            DISTRIBUTOR_ID,
+            provisioning_status=constants.ACTIVE,
+            operating_status=constants.ONLINE)
+
+        # Test the revert
+        mock_distributor_repo_update.reset_mock()
+        mark_distributor_active.revert(self.distributor_mock)
+
+        mock_distributor_repo_update.assert_called_once_with(
+            'TEST',
+            id=DISTRIBUTOR_ID,
+            provisioning_status=constants.ERROR)
+
+        # Test the revert with exception
+        mock_distributor_repo_update.reset_mock()
+        mock_distributor_repo_update.side_effect = Exception('fail')
+        mark_distributor_active.revert(self.distributor_mock)
+
+        mock_distributor_repo_update.assert_called_once_with(
+            'TEST',
+            id=DISTRIBUTOR_ID,
+            provisioning_status=constants.ERROR)
+
+    @mock.patch('octavia.db.repositories.DistributorRepository.update')
+    def test_mark_distributor_pending_create_in_db(
+            self,
+            mock_distributor_repo_update,
+            mock_generate_uuid,
+            mock_LOG,
+            mock_get_session,
+            mock_loadbalancer_repo_update,
+            mock_listener_repo_update,
+            mock_amphora_repo_update,
+            mock_amphora_repo_delete):
+
+        mark_distributor_pending_create = (database_tasks.
+                                           MarkDistributorPendingCreateInDB())
+        mark_distributor_pending_create.execute(self.distributor_mock)
+
+        mock_distributor_repo_update.assert_called_once_with(
+            'TEST',
+            DISTRIBUTOR_ID,
+            provisioning_status=constants.PENDING_CREATE)
+
+        # Test the revert
+        mock_distributor_repo_update.reset_mock()
+        mark_distributor_pending_create.revert(self.distributor_mock)
+
+        mock_distributor_repo_update.assert_called_once_with(
+            'TEST',
+            id=DISTRIBUTOR_ID,
+            provisioning_status=constants.ERROR)
+
+        # Test the revert with exception
+        mock_distributor_repo_update.reset_mock()
+        mock_distributor_repo_update.side_effect = Exception('fail')
+        mark_distributor_pending_create.revert(self.distributor_mock)
+
+        mock_distributor_repo_update.assert_called_once_with(
+            'TEST',
+            id=DISTRIBUTOR_ID,
+            provisioning_status=constants.ERROR)
+
+    @mock.patch('octavia.db.repositories.DistributorRepository.update')
+    def test_mark_distributor_pending_delete_in_db(
+            self,
+            mock_distributor_repo_update,
+            mock_generate_uuid,
+            mock_LOG,
+            mock_get_session,
+            mock_loadbalancer_repo_update,
+            mock_listener_repo_update,
+            mock_amphora_repo_update,
+            mock_amphora_repo_delete):
+
+        mark_distributor_pending_delete = (database_tasks.
+                                           MarkDistributorPendingDeleteInDB())
+        mark_distributor_pending_delete.execute(self.distributor_mock)
+
+        mock_distributor_repo_update.assert_called_once_with(
+            'TEST',
+            DISTRIBUTOR_ID,
+            provisioning_status=constants.PENDING_DELETE)
+
+        # Test the revert
+        mock_distributor_repo_update.reset_mock()
+        mark_distributor_pending_delete.revert(self.distributor_mock)
+
+        mock_distributor_repo_update.assert_called_once_with(
+            'TEST',
+            id=DISTRIBUTOR_ID,
+            provisioning_status=constants.ERROR)
+
+        # Test the revert with exception
+        mock_distributor_repo_update.reset_mock()
+        mock_distributor_repo_update.side_effect = Exception('fail')
+        mark_distributor_pending_delete.revert(self.distributor_mock)
+
+        mock_distributor_repo_update.assert_called_once_with(
+            'TEST',
+            id=DISTRIBUTOR_ID,
+            provisioning_status=constants.ERROR)
+
+    @mock.patch('octavia.db.repositories.DistributorRepository.update')
+    def test_mark_distributor_pending_update_in_db(
+            self,
+            mock_distributor_repo_update,
+            mock_generate_uuid,
+            mock_LOG,
+            mock_get_session,
+            mock_loadbalancer_repo_update,
+            mock_listener_repo_update,
+            mock_amphora_repo_update,
+            mock_amphora_repo_delete):
+
+        mark_distributor_pending_update = (database_tasks.
+                                           MarkDistributorPendingUpdateInDB())
+        mark_distributor_pending_update.execute(self.distributor_mock)
+
+        mock_distributor_repo_update.assert_called_once_with(
+            'TEST',
+            DISTRIBUTOR_ID,
+            provisioning_status=constants.PENDING_UPDATE)
+
+        # Test the revert
+        mock_distributor_repo_update.reset_mock()
+        mark_distributor_pending_update.revert(self.distributor_mock)
+
+        mock_distributor_repo_update.assert_called_once_with(
+            'TEST',
+            id=DISTRIBUTOR_ID,
+            provisioning_status=constants.ERROR)
+
+        # Test the revert with exception
+        mock_distributor_repo_update.reset_mock()
+        mock_distributor_repo_update.side_effect = Exception('fail')
+        mark_distributor_pending_update.revert(self.distributor_mock)
+
+        mock_distributor_repo_update.assert_called_once_with(
+            'TEST',
+            id=DISTRIBUTOR_ID,
+            provisioning_status=constants.ERROR)

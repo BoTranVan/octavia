@@ -169,3 +169,13 @@ class PoolToErrorOnRevertTask(BaseLifecycleTask):
         self.task_utils.mark_loadbalancer_prov_status_active(loadbalancer.id)
         for listener in listeners:
             self.task_utils.mark_listener_prov_status_active(listener.id)
+
+
+class DistributorToErrorOnRevertTask(BaseLifecycleTask):
+    """Task to checkpoint Distributor lifecycle milestones."""
+
+    def execute(self, distributor):
+        pass
+
+    def revert(self, distributor, *args, **kwargs):
+        self.task_utils.mark_distributor_prov_status_error(distributor.id)

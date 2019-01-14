@@ -153,3 +153,15 @@ class Endpoint(object):
         LOG.info('Updating amphora \'%s\' agent configuration...',
                  amphora_id)
         self.worker.update_amphora_agent_config(amphora_id)
+
+    def create_distributor(self, context, distributor_id):
+        LOG.info('Creating distributor \'%s\'...', distributor_id)
+        self.worker.create_distributor(distributor_id)
+
+    def update_distributor(self, context, distributor_id, distributor_updates):
+        LOG.info('Updateing distributor \'%s\'...', distributor_id)
+        self.worker.update_distributor(distributor_id, distributor_updates)
+
+    def delete_distributor(self, context, distributor_id):
+        LOG.info('Deleteing distributor \'%s\'...', distributor_id)
+        self.worker.delete_distributor(distributor_id)

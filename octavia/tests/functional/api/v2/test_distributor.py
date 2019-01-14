@@ -211,6 +211,30 @@ class TestDistributor(base.BaseAPITest):
         self.conf.config(group='api_settings', auth_strategy=auth_strategy)
         self.assertEqual(self.NOT_AUTHORIZED_BODY, api_flavor)
 
+    def test_create_l3_distributor(self):
+        distributor_json = {
+            'name': 'test1',
+            'frontend_subnet': uuidutils.generate_uuid(),
+            'distributor_driver': 'l3',
+            'config_data': '{"as": 62000, "router_id": "2.2.2.2"}'}
+        body = self._build_body(distributor_json)
+        response = self.post(self.DISTRIBUTORS_PATH, body)
+        api_distributor = response.json.get(self.root_tag)
+        self._assert_request_matches_response(distributor_json,
+                                              api_distributor)
+
+    def test_create_l3_distributor_with_invalid_options(self):
+        distributor_json = {
+            'name': 'test1',
+            'frontend_subnet': uuidutils.generate_uuid(),
+            'distributor_driver': 'l3',
+            'config_data': '{"as": "dddd", "router_id": "2.2.2.2"}'}
+        body = self._build_body(distributor_json)
+        response = self.post(self.DISTRIBUTORS_PATH, body, status=501)
+        err_msg = ("The \'l3\' distributor does not support a requested "
+                   "option: as u\'dddd\' is not of type \'number\'")
+        self.assertEqual(err_msg, response.json.get('faultstring'))
+
     def test_get(self):
         distributor = self.create_distributor(
             'name', 'noop', uuidutils.generate_uuid(), '{}')
@@ -424,6 +448,61 @@ class TestDistributor(base.BaseAPITest):
         self.assertEqual('test2', updated_distributor['name'])
         self.assertEqual('desc test2', updated_distributor['description'])
         self.assertEqual(distributor_id, updated_distributor['id'])
+
+    def test_update_l3_distributor(self):
+        distributor_json = {
+            'name': 'test1',
+            'frontend_subnet': uuidutils.generate_uuid(),
+            'distributor_driver': 'l3',
+            'config_data': '{"as": 6235, "router_id": "6.6.6.6"}'}
+        body = self._build_body(distributor_json)
+        response = self.post(self.DISTRIBUTORS_PATH, body)
+        api_distributor = response.json.get(self.root_tag)
+        distributor_id = api_distributor.get('id')
+        self._assert_request_matches_response(distributor_json,
+                                              api_distributor)
+        self.set_object_status(self.distributor_repo, distributor_id)
+
+        distributor_json = {
+            'name': 'test2',
+            'description': "desc test2",
+            'config_data': '{"as": 6200, "router_id": "6.6.6.6"}'}
+        body = self._build_body(distributor_json)
+        response = self.put(self.DISTRIBUTOR_PATH.format(
+            distributor_id=distributor_id), body)
+        updated_distributor = self.get(self.DISTRIBUTOR_PATH.format(
+            distributor_id=distributor_id)).json.get(self.root_tag)
+
+        self.assertEqual('test2', updated_distributor['name'])
+        self.assertEqual('desc test2', updated_distributor['description'])
+        self.assertEqual('{"as": 6200, "router_id": "6.6.6.6"}',
+                         updated_distributor['config_data'])
+        self.assertEqual(distributor_id, updated_distributor['id'])
+
+    def test_update_l3_distributor_with_invalid_options(self):
+        distributor_json = {
+            'name': 'test1',
+            'frontend_subnet': uuidutils.generate_uuid(),
+            'distributor_driver': 'l3',
+            'config_data': '{"as": 6235, "router_id": "6.6.6.6"}'}
+        body = self._build_body(distributor_json)
+        response = self.post(self.DISTRIBUTORS_PATH, body)
+        api_distributor = response.json.get(self.root_tag)
+        distributor_id = api_distributor.get('id')
+        self._assert_request_matches_response(distributor_json,
+                                              api_distributor)
+        self.set_object_status(self.distributor_repo, distributor_id)
+
+        distributor_json = {
+            'name': 'test2',
+            'description': "desc test2",
+            'config_data': '{"router_id": "6.6.6.6"}'}
+        body = self._build_body(distributor_json)
+        response = self.put(self.DISTRIBUTOR_PATH.format(
+            distributor_id=distributor_id), body, status=501)
+        err_msg = ("The 'l3' distributor does not support a requested "
+                   "option: 'as' is a required property")
+        self.assertEqual(err_msg, response.json.get('faultstring'))
 
     def test_update_with_config_data(self):
         distributor_json = {

@@ -403,3 +403,9 @@ class UnsupportUpdateConfigData(APIException):
     msg = _("'config_data' cannot be updated, "
             "because the distributor is in use.")
     code = 409
+
+
+class DistributorUnsupportOptionError(APIException):
+    msg = _("The '%(type)s' distributor does not support a requested "
+            "option: %(user_msg)s")
+    code = 501

@@ -36,6 +36,7 @@ class TestTaskUtils(base.TestCase):
         self.LOADBALANCER_ID = uuidutils.generate_uuid()
         self.MEMBER_ID = uuidutils.generate_uuid()
         self.POOL_ID = uuidutils.generate_uuid()
+        self.DISTRIBUTOR_ID = uuidutils.generate_uuid()
 
         super(TestTaskUtils, self).setUp()
 
@@ -262,6 +263,52 @@ class TestTaskUtils(base.TestCase):
         self.task_utils.mark_pool_prov_status_error(self.POOL_ID)
 
         self.assertFalse(mock_pool_repo_update.called)
+
+    @mock.patch('octavia.db.api.get_session', return_value=TEST_SESSION)
+    @mock.patch('octavia.db.repositories.DistributorRepository.update')
+    def test_mark_distributor_prov_status_error(self,
+                                                mock_distributor_repo_update,
+                                                mock_get_session):
+
+        # Happy path
+        self.task_utils.mark_distributor_prov_status_error(self.DISTRIBUTOR_ID)
+
+        mock_distributor_repo_update.assert_called_once_with(
+            TEST_SESSION,
+            id=self.DISTRIBUTOR_ID,
+            provisioning_status=constants.ERROR)
+
+        # Exception path
+        mock_distributor_repo_update.reset_mock()
+        mock_get_session.side_effect = Exception('fail')
+
+        self.task_utils.mark_distributor_prov_status_error(self.DISTRIBUTOR_ID)
+
+        self.assertFalse(mock_distributor_repo_update.called)
+
+    @mock.patch('octavia.db.api.get_session', return_value=TEST_SESSION)
+    @mock.patch('octavia.db.repositories.DistributorRepository.update')
+    def test_mark_distributor_prov_status_active(self,
+                                                 mock_distributor_repo_update,
+                                                 mock_get_session):
+
+        # Happy path
+        self.task_utils.mark_distributor_prov_status_active(
+            self.DISTRIBUTOR_ID)
+
+        mock_distributor_repo_update.assert_called_once_with(
+            TEST_SESSION,
+            id=self.DISTRIBUTOR_ID,
+            provisioning_status=constants.ACTIVE)
+
+        # Exception path
+        mock_distributor_repo_update.reset_mock()
+        mock_get_session.side_effect = Exception('fail')
+
+        self.task_utils.mark_distributor_prov_status_active(
+            self.DISTRIBUTOR_ID)
+
+        self.assertFalse(mock_distributor_repo_update.called)
 
     @mock.patch('octavia.db.api.get_session', return_value=TEST_SESSION)
     @mock.patch('octavia.db.repositories.LoadBalancerRepository.get')

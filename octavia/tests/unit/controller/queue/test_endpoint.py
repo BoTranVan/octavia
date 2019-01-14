@@ -180,3 +180,19 @@ class TestEndpoint(base.TestCase):
         self.ep.update_amphora_agent_config(self.context, self.resource_id)
         self.ep.worker.update_amphora_agent_config.assert_called_once_with(
             self.resource_id)
+
+    def test_create_distributor(self):
+        self.ep.create_distributor(self.context, self.resource_id)
+        self.ep.worker.create_distributor.assert_called_once_with(
+            self.resource_id)
+
+    def test_update_distributor(self):
+        self.ep.update_distributor(self.context, self.resource_id,
+                                   self.resource_updates)
+        self.ep.worker.update_distributor.assert_called_once_with(
+            self.resource_id, self.resource_updates)
+
+    def test_delete_distributor(self):
+        self.ep.delete_distributor(self.context, self.resource_id)
+        self.ep.worker.delete_distributor.assert_called_once_with(
+            self.resource_id)

@@ -51,6 +51,7 @@ class BaseDatabaseTask(task.Task):
         self.amp_health_repo = repo.AmphoraHealthRepository()
         self.l7policy_repo = repo.L7PolicyRepository()
         self.l7rule_repo = repo.L7RuleRepository()
+        self.distributor_repo = repo.DistributorRepository()
         self.task_utils = task_utilities.TaskUtils()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
@@ -2818,3 +2819,206 @@ class UpdatePoolMembersOperatingStatusInDB(BaseDatabaseTask):
         self.member_repo.update_pool_members(db_apis.get_session(),
                                              pool.id,
                                              operating_status=operating_status)
+
+
+class DeleteDistributorInDB(BaseDatabaseTask):
+    """Delete the distributor in the DB.
+
+    Since sqlalchemy will likely retry by itself always revert if it fails
+    """
+
+    def execute(self, distributor):
+        """Delete the distributor in DB
+
+        :param distributor: The distributor to be deleted
+        :returns: None
+        """
+
+        LOG.debug("Delete in DB for distributor id: %s ", distributor.id)
+        self.distributor_repo.delete(db_apis.get_session(), id=distributor.id)
+
+    def revert(self, distributor, *args, **kwargs):
+        """Mark the distributor ERROR since the delete couldn't happen
+
+        :param distributor: Distributor that failed to get deleted
+        :returns: None
+        """
+
+        LOG.warning("Reverting delete in DB for "
+                    "distributor id %s", distributor.id)
+        try:
+            self.distributor_repo.update(db_apis.get_session(), distributor.id,
+                                         provisioning_status=constants.ERROR)
+        except Exception as e:
+            LOG.error("Failed to update distributor %(distributor)s "
+                      "provisioning_status to ERROR due to: %(except)s",
+                      {'distributor': distributor.id, 'except': e})
+
+
+class UpdateDistributorInDB(BaseDatabaseTask):
+    """Update the Distributor in the DB.
+
+    Since sqlalchemy will likely retry by itself always revert if it fails
+    """
+
+    def execute(self, distributor, update_dict):
+        """Update the distributor in the DB
+
+        :param distributor: The Distributor to be updated
+        :param update_dict: The dictionary of updates to apply
+        :returns: None
+        """
+
+        LOG.debug("Update DB for distributor id: %s ", distributor.id)
+        self.distributor_repo.update(db_apis.get_session(), distributor.id,
+                                     **update_dict)
+
+    def revert(self, distributor, *args, **kwargs):
+        """Mark the distributor ERROR since the update couldn't happen
+
+        :param distributor: L7 distributor that couldn't be updated
+        :returns: None
+        """
+
+        LOG.warning("Reverting update distributor in DB "
+                    "for distributor id %s", distributor.id)
+        try:
+            self.distributor_repo.update(db_apis.get_session(), distributor.id,
+                                         provisioning_status=constants.ERROR)
+        except Exception as e:
+            LOG.error("Failed to update distributor %(dis)s "
+                      "provisioning_status to ERROR due to: "
+                      "%(except)s", {'dis': distributor.id,
+                                     'except': e})
+
+
+class MarkDistributorActiveInDB(BaseDatabaseTask):
+    """Mark the distributor ACTIVE in the DB.
+
+    Since sqlalchemy will likely retry by itself always revert if it fails
+    """
+
+    def execute(self, distributor):
+        """Mark the distributor ACTIVE in DB.
+
+        :param distributor: Distributor object to be updated
+        :returns: None
+        """
+
+        LOG.debug("Mark ACTIVE in DB for distributor id: %s",
+                  distributor.id)
+
+        op_status = (constants.ONLINE if distributor.enabled
+                     else constants.OFFLINE)
+        self.distributor_repo.update(
+            db_apis.get_session(),
+            distributor.id,
+            provisioning_status=constants.ACTIVE,
+            operating_status=op_status)
+
+    def revert(self, distributor, *args, **kwargs):
+        """Mark the distributor as broken
+
+        :param distributor: Distributor object that failed to update
+        :returns: None
+        """
+
+        LOG.warning("Reverting mark distributor ACTIVE in DB for "
+                    "distributor id %s", distributor.id)
+        self.task_utils.mark_distributor_prov_status_error(distributor.id)
+
+
+class MarkDistributorPendingCreateInDB(BaseDatabaseTask):
+    """Mark the distributor pending create in the DB.
+
+    Since sqlalchemy will likely retry by itself always revert if it fails
+    """
+
+    def execute(self, distributor):
+        """Mark the distributor as pending create in DB.
+
+        :param distributor: Distributor object to be updated
+        :returns: None
+        """
+
+        LOG.debug("Mark PENDING CREATE in DB for distributor id: %s",
+                  distributor.id)
+        self.distributor_repo.update(
+            db_apis.get_session(),
+            distributor.id,
+            provisioning_status=constants.PENDING_CREATE)
+
+    def revert(self, distributor, *args, **kwargs):
+        """Mark the distributor as broken
+
+        :param distributor: Distributor object that failed to update
+        :returns: None
+        """
+
+        LOG.warning("Reverting mark distributor pending create in DB "
+                    "for distributor id %s", distributor.id)
+        self.task_utils.mark_distributor_prov_status_error(distributor.id)
+
+
+class MarkDistributorPendingDeleteInDB(BaseDatabaseTask):
+    """Mark the distributor pending delete in the DB.
+
+    Since sqlalchemy will likely retry by itself always revert if it fails
+    """
+
+    def execute(self, distributor):
+        """Mark the distributor as pending delete in DB.
+
+        :param pool: Distributor object to be updated
+        :returns: None
+        """
+
+        LOG.debug("Mark PENDING DELETE in DB for distributor id: %s",
+                  distributor.id)
+        self.distributor_repo.update(
+            db_apis.get_session(),
+            distributor.id,
+            provisioning_status=constants.PENDING_DELETE)
+
+    def revert(self, distributor, *args, **kwargs):
+        """Mark the distributor as broken
+
+        :param distributor: Distributor object that failed to update
+        :returns: None
+        """
+
+        LOG.warning("Reverting mark distributor pending delete in DB "
+                    "for pool id %s", distributor.id)
+        self.task_utils.mark_distributor_prov_status_error(distributor.id)
+
+
+class MarkDistributorPendingUpdateInDB(BaseDatabaseTask):
+    """Mark the distributor pending update in the DB.
+
+    Since sqlalchemy will likely retry by itself always revert if it fails
+    """
+
+    def execute(self, distributor):
+        """Mark the distributor as pending update in DB.
+
+        :param distributor: Distributor object to be updated
+        :returns: None
+        """
+
+        LOG.debug("Mark PENDING UPDATE in DB for distributor id: %s",
+                  distributor.id)
+        self.distributor_repo.update(
+            db_apis.get_session(),
+            distributor.id,
+            provisioning_status=constants.PENDING_UPDATE)
+
+    def revert(self, distributor, *args, **kwargs):
+        """Mark the distributor as broken
+
+        :param distributor: Distributor object that failed to update
+        :returns: None
+        """
+
+        LOG.warning("Reverting mark distributor pending update in DB "
+                    "for distributor id %s", distributor.id)
+        self.task_utils.mark_distributor_prov_status_error(distributor.id)

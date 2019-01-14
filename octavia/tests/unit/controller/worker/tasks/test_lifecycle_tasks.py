@@ -50,6 +50,9 @@ class TestLifecycleTasks(base.TestCase):
         self.POOL = mock.MagicMock()
         self.POOL_ID = uuidutils.generate_uuid()
         self.POOL.id = self.POOL_ID
+        self.DISTRIBUTOR = mock.MagicMock()
+        self.DISTRIBUTOR_ID = uuidutils.generate_uuid()
+        self.DISTRIBUTOR.id = self.DISTRIBUTOR_ID
 
         super(TestLifecycleTasks, self).setUp()
 
@@ -399,3 +402,21 @@ class TestLifecycleTasks(base.TestCase):
             self.LOADBALANCER_ID)
         mock_listener_prov_status_active.assert_called_once_with(
             self.LISTENER_ID)
+
+    @mock.patch('octavia.controller.worker.task_utils.TaskUtils.'
+                'mark_distributor_prov_status_error')
+    def test_DistributorToErrorRevertTask(
+            self,
+            mock_distributor_prov_status_error):
+
+        distributor_to_error_on_revert = (lifecycle_tasks.
+                                          DistributorToErrorOnRevertTask())
+
+        # Execute
+        distributor_to_error_on_revert.execute(self.DISTRIBUTOR)
+        self.assertFalse(mock_distributor_prov_status_error.called)
+
+        # Revert
+        distributor_to_error_on_revert.revert(self.DISTRIBUTOR)
+        mock_distributor_prov_status_error.assert_called_once_with(
+            self.DISTRIBUTOR_ID)

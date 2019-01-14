@@ -33,6 +33,7 @@ MEMBER_ID = uuidutils.generate_uuid()
 COMPUTE_ID = uuidutils.generate_uuid()
 L7POLICY_ID = uuidutils.generate_uuid()
 L7RULE_ID = uuidutils.generate_uuid()
+DISTRIBUTOR_ID = uuidutils.generate_uuid()
 HEALTH_UPDATE_DICT = {'delay': 1, 'timeout': 2}
 LISTENER_UPDATE_DICT = {'name': 'test', 'description': 'test2'}
 MEMBER_UPDATE_DICT = {'weight': 1, 'ip_address': '10.0.0.0'}
@@ -51,6 +52,7 @@ _listener_mock = mock.MagicMock()
 _load_balancer_mock = mock.MagicMock()
 _member_mock = mock.MagicMock()
 _pool_mock = mock.MagicMock()
+_distributor_mock = mock.MagicMock()
 _l7policy_mock = mock.MagicMock()
 _l7rule_mock = mock.MagicMock()
 _create_map_flow_mock = mock.MagicMock()
@@ -86,6 +88,8 @@ class TestException(Exception):
             return_value=_member_mock)
 @mock.patch('octavia.db.repositories.PoolRepository.get',
             return_value=_pool_mock)
+@mock.patch('octavia.db.repositories.DistributorRepository.get',
+            return_value=_distributor_mock)
 @mock.patch('octavia.common.base_taskflow.BaseTaskFlowEngine._taskflow_load',
             return_value=_flow_mock)
 @mock.patch('taskflow.listeners.logging.DynamicLoggingListener')
@@ -123,6 +127,7 @@ class TestControllerWorker(base.TestCase):
                             mock_get_create_amp_flow,
                             mock_dyn_log_listener,
                             mock_taskflow_load,
+                            mock_distributor_repo_get,
                             mock_pool_repo_get,
                             mock_member_repo_get,
                             mock_l7rule_repo_get,
@@ -158,6 +163,7 @@ class TestControllerWorker(base.TestCase):
                             mock_api_get_session,
                             mock_dyn_log_listener,
                             mock_taskflow_load,
+                            mock_distributor_repo_get,
                             mock_pool_repo_get,
                             mock_member_repo_get,
                             mock_l7rule_repo_get,
@@ -191,6 +197,7 @@ class TestControllerWorker(base.TestCase):
                                    mock_api_get_session,
                                    mock_dyn_log_listener,
                                    mock_taskflow_load,
+                                   mock_distributor_repo_get,
                                    mock_pool_repo_get,
                                    mock_member_repo_get,
                                    mock_l7rule_repo_get,
@@ -229,6 +236,7 @@ class TestControllerWorker(base.TestCase):
                                    mock_api_get_session,
                                    mock_dyn_log_listener,
                                    mock_taskflow_load,
+                                   mock_distributor_repo_get,
                                    mock_pool_repo_get,
                                    mock_member_repo_get,
                                    mock_l7rule_repo_get,
@@ -265,6 +273,7 @@ class TestControllerWorker(base.TestCase):
                                    mock_api_get_session,
                                    mock_dyn_log_listener,
                                    mock_taskflow_load,
+                                   mock_distributor_repo_get,
                                    mock_pool_repo_get,
                                    mock_member_repo_get,
                                    mock_l7rule_repo_get,
@@ -304,6 +313,7 @@ class TestControllerWorker(base.TestCase):
                              mock_api_get_session,
                              mock_dyn_log_listener,
                              mock_taskflow_load,
+                             mock_distributor_repo_get,
                              mock_pool_repo_get,
                              mock_member_repo_get,
                              mock_l7rule_repo_get,
@@ -337,6 +347,7 @@ class TestControllerWorker(base.TestCase):
                              mock_api_get_session,
                              mock_dyn_log_listener,
                              mock_taskflow_load,
+                             mock_distributor_repo_get,
                              mock_pool_repo_get,
                              mock_member_repo_get,
                              mock_l7rule_repo_get,
@@ -366,6 +377,7 @@ class TestControllerWorker(base.TestCase):
                              mock_api_get_session,
                              mock_dyn_log_listener,
                              mock_taskflow_load,
+                             mock_distributor_repo_get,
                              mock_pool_repo_get,
                              mock_member_repo_get,
                              mock_l7rule_repo_get,
@@ -402,6 +414,7 @@ class TestControllerWorker(base.TestCase):
             mock_api_get_session,
             mock_dyn_log_listener,
             mock_taskflow_load,
+            mock_distributor_repo_get,
             mock_pool_repo_get,
             mock_member_repo_get,
             mock_l7rule_repo_get,
@@ -448,6 +461,7 @@ class TestControllerWorker(base.TestCase):
             mock_api_get_session,
             mock_dyn_log_listener,
             mock_taskflow_load,
+            mock_distributor_repo_get,
             mock_pool_repo_get,
             mock_member_repo_get,
             mock_l7rule_repo_get,
@@ -492,6 +506,7 @@ class TestControllerWorker(base.TestCase):
             mock_api_get_session,
             mock_dyn_log_listener,
             mock_taskflow_load,
+            mock_distributor_repo_get,
             mock_pool_repo_get,
             mock_member_repo_get,
             mock_l7rule_repo_get,
@@ -544,6 +559,7 @@ class TestControllerWorker(base.TestCase):
             mock_api_get_session,
             mock_dyn_log_listener,
             mock_taskflow_load,
+            mock_distributor_repo_get,
             mock_pool_repo_get,
             mock_member_repo_get,
             mock_l7rule_repo_get,
@@ -589,6 +605,7 @@ class TestControllerWorker(base.TestCase):
                                                   mock_api_get_session,
                                                   mock_dyn_log_listener,
                                                   mock_taskflow_load,
+                                                  mock_distributor_repo_get,
                                                   mock_pool_repo_get,
                                                   mock_member_repo_get,
                                                   mock_l7rule_repo_get,
@@ -627,6 +644,7 @@ class TestControllerWorker(base.TestCase):
                                                mock_api_get_session,
                                                mock_dyn_log_listener,
                                                mock_taskflow_load,
+                                               mock_distributor_repo_get,
                                                mock_pool_repo_get,
                                                mock_member_repo_get,
                                                mock_l7rule_repo_get,
@@ -668,6 +686,7 @@ class TestControllerWorker(base.TestCase):
                                   mock_api_get_session,
                                   mock_dyn_log_listener,
                                   mock_taskflow_load,
+                                  mock_distributor_repo_get,
                                   mock_pool_repo_get,
                                   mock_member_repo_get,
                                   mock_l7rule_repo_get,
@@ -706,6 +725,7 @@ class TestControllerWorker(base.TestCase):
                            mock_api_get_session,
                            mock_dyn_log_listener,
                            mock_taskflow_load,
+                           mock_distributor_repo_get,
                            mock_pool_repo_get,
                            mock_member_repo_get,
                            mock_l7rule_repo_get,
@@ -742,6 +762,7 @@ class TestControllerWorker(base.TestCase):
                            mock_api_get_session,
                            mock_dyn_log_listener,
                            mock_taskflow_load,
+                           mock_distributor_repo_get,
                            mock_pool_repo_get,
                            mock_member_repo_get,
                            mock_l7rule_repo_get,
@@ -776,6 +797,7 @@ class TestControllerWorker(base.TestCase):
                            mock_api_get_session,
                            mock_dyn_log_listener,
                            mock_taskflow_load,
+                           mock_distributor_repo_get,
                            mock_pool_repo_get,
                            mock_member_repo_get,
                            mock_l7rule_repo_get,
@@ -813,6 +835,7 @@ class TestControllerWorker(base.TestCase):
                                   mock_api_get_session,
                                   mock_dyn_log_listener,
                                   mock_taskflow_load,
+                                  mock_distributor_repo_get,
                                   mock_pool_repo_get,
                                   mock_member_repo_get,
                                   mock_l7rule_repo_get,
@@ -845,6 +868,7 @@ class TestControllerWorker(base.TestCase):
                          mock_api_get_session,
                          mock_dyn_log_listener,
                          mock_taskflow_load,
+                         mock_distributor_repo_get,
                          mock_pool_repo_get,
                          mock_member_repo_get,
                          mock_l7rule_repo_get,
@@ -879,6 +903,7 @@ class TestControllerWorker(base.TestCase):
                          mock_api_get_session,
                          mock_dyn_log_listener,
                          mock_taskflow_load,
+                         mock_distributor_repo_get,
                          mock_pool_repo_get,
                          mock_member_repo_get,
                          mock_l7rule_repo_get,
@@ -911,6 +936,7 @@ class TestControllerWorker(base.TestCase):
                          mock_api_get_session,
                          mock_dyn_log_listener,
                          mock_taskflow_load,
+                         mock_distributor_repo_get,
                          mock_pool_repo_get,
                          mock_member_repo_get,
                          mock_l7rule_repo_get,
@@ -946,6 +972,7 @@ class TestControllerWorker(base.TestCase):
                              mock_api_get_session,
                              mock_dyn_log_listener,
                              mock_taskflow_load,
+                             mock_distributor_repo_get,
                              mock_pool_repo_get,
                              mock_member_repo_get,
                              mock_l7rule_repo_get,
@@ -980,6 +1007,7 @@ class TestControllerWorker(base.TestCase):
                              mock_api_get_session,
                              mock_dyn_log_listener,
                              mock_taskflow_load,
+                             mock_distributor_repo_get,
                              mock_pool_repo_get,
                              mock_member_repo_get,
                              mock_l7rule_repo_get,
@@ -1012,6 +1040,7 @@ class TestControllerWorker(base.TestCase):
                              mock_api_get_session,
                              mock_dyn_log_listener,
                              mock_taskflow_load,
+                             mock_distributor_repo_get,
                              mock_pool_repo_get,
                              mock_member_repo_get,
                              mock_l7rule_repo_get,
@@ -1047,6 +1076,7 @@ class TestControllerWorker(base.TestCase):
                            mock_api_get_session,
                            mock_dyn_log_listener,
                            mock_taskflow_load,
+                           mock_distributor_repo_get,
                            mock_pool_repo_get,
                            mock_member_repo_get,
                            mock_l7rule_repo_get,
@@ -1082,6 +1112,7 @@ class TestControllerWorker(base.TestCase):
                            mock_api_get_session,
                            mock_dyn_log_listener,
                            mock_taskflow_load,
+                           mock_distributor_repo_get,
                            mock_pool_repo_get,
                            mock_member_repo_get,
                            mock_l7rule_repo_get,
@@ -1115,6 +1146,7 @@ class TestControllerWorker(base.TestCase):
                            mock_api_get_session,
                            mock_dyn_log_listener,
                            mock_taskflow_load,
+                           mock_distributor_repo_get,
                            mock_pool_repo_get,
                            mock_member_repo_get,
                            mock_l7rule_repo_get,
@@ -1156,6 +1188,7 @@ class TestControllerWorker(base.TestCase):
                               mock_api_get_session,
                               mock_dyn_log_listener,
                               mock_taskflow_load,
+                              mock_distributor_repo_get,
                               mock_pool_repo_get,
                               mock_member_repo_get,
                               mock_l7rule_repo_get,
@@ -1192,6 +1225,7 @@ class TestControllerWorker(base.TestCase):
                                       mock_api_get_session,
                                       mock_dyn_log_listener,
                                       mock_taskflow_load,
+                                      mock_distributor_repo_get,
                                       mock_pool_repo_get,
                                       mock_member_repo_get,
                                       mock_l7rule_repo_get,
@@ -1217,6 +1251,7 @@ class TestControllerWorker(base.TestCase):
                                          mock_api_get_session,
                                          mock_dyn_log_listener,
                                          mock_taskflow_load,
+                                         mock_distributor_repo_get,
                                          mock_pool_repo_get,
                                          mock_member_repo_get,
                                          mock_l7rule_repo_get,
@@ -1241,6 +1276,7 @@ class TestControllerWorker(base.TestCase):
                                 mock_api_get_session,
                                 mock_dyn_log_listener,
                                 mock_taskflow_load,
+                                mock_distributor_repo_get,
                                 mock_pool_repo_get,
                                 mock_member_repo_get,
                                 mock_l7rule_repo_get,
@@ -1267,6 +1303,7 @@ class TestControllerWorker(base.TestCase):
                                       mock_api_get_session,
                                       mock_dyn_log_listener,
                                       mock_taskflow_load,
+                                      mock_distributor_repo_get,
                                       mock_pool_repo_get,
                                       mock_member_repo_get,
                                       mock_l7rule_repo_get,
@@ -1296,6 +1333,7 @@ class TestControllerWorker(base.TestCase):
                                    mock_api_get_session,
                                    mock_dyn_log_listener,
                                    mock_taskflow_load,
+                                   mock_distributor_repo_get,
                                    mock_pool_repo_get,
                                    mock_member_repo_get,
                                    mock_l7rule_repo_get,
@@ -1351,6 +1389,7 @@ class TestControllerWorker(base.TestCase):
                                             mock_api_get_session,
                                             mock_dyn_log_listener,
                                             mock_taskflow_load,
+                                            mock_distributor_repo_get,
                                             mock_pool_repo_get,
                                             mock_member_repo_get,
                                             mock_l7rule_repo_get,
@@ -1391,6 +1430,7 @@ class TestControllerWorker(base.TestCase):
                                    mock_api_get_session,
                                    mock_dyn_log_listener,
                                    mock_taskflow_load,
+                                   mock_distributor_repo_get,
                                    mock_pool_repo_get,
                                    mock_member_repo_get,
                                    mock_l7rule_repo_get,
@@ -1422,6 +1462,7 @@ class TestControllerWorker(base.TestCase):
                                          mock_api_get_session,
                                          mock_dyn_log_listener,
                                          mock_taskflow_load,
+                                         mock_distributor_repo_get,
                                          mock_pool_repo_get,
                                          mock_member_repo_get,
                                          mock_l7rule_repo_get,
@@ -1463,3 +1504,98 @@ class TestControllerWorker(base.TestCase):
                                  store={constants.AMPHORA: _amphora_mock,
                                         constants.FLAVOR: {}}))
         _flow_mock.run.assert_called_once_with()
+
+    @mock.patch('octavia.controller.worker.flows.distributor_flows.'
+                'DistributorFlows.get_create_distributor_flows',
+                return_value=_flow_mock)
+    def test_create_distributor(self,
+                                mock_get_create_distributor_flow,
+                                mock_api_get_session,
+                                mock_dyn_log_listener,
+                                mock_taskflow_load,
+                                mock_distributor_repo_get,
+                                mock_pool_repo_get,
+                                mock_member_repo_get,
+                                mock_l7rule_repo_get,
+                                mock_l7policy_repo_get,
+                                mock_listener_repo_get,
+                                mock_lb_repo_get,
+                                mock_health_mon_repo_get,
+                                mock_amp_repo_get):
+        _flow_mock.reset_mock()
+        _distributor_mock.distributor_driver = "l3"
+
+        cw = controller_worker.ControllerWorker()
+        cw.create_distributor(DISTRIBUTOR_ID)
+
+        (base_taskflow.BaseTaskFlowEngine._taskflow_load.
+         assert_called_once_with(
+             _flow_mock,
+             store={constants.DISTRIBUTOR: _distributor_mock}))
+
+        _flow_mock.run.assert_called_once_with()
+        self.assertEqual(1, mock_distributor_repo_get.call_count)
+
+    @mock.patch('octavia.controller.worker.flows.distributor_flows.'
+                'DistributorFlows.get_update_distributor_flows',
+                return_value=_flow_mock)
+    def test_update_distributor(self,
+                                mock_get_create_distributor_flow,
+                                mock_api_get_session,
+                                mock_dyn_log_listener,
+                                mock_taskflow_load,
+                                mock_distributor_repo_get,
+                                mock_pool_repo_get,
+                                mock_member_repo_get,
+                                mock_l7rule_repo_get,
+                                mock_l7policy_repo_get,
+                                mock_listener_repo_get,
+                                mock_lb_repo_get,
+                                mock_health_mon_repo_get,
+                                mock_amp_repo_get):
+        _flow_mock.reset_mock()
+        _update_distributor_mock = mock.MagicMock()
+        _distributor_mock.distributor_driver = "l3"
+
+        cw = controller_worker.ControllerWorker()
+        cw.update_distributor(DISTRIBUTOR_ID, _update_distributor_mock)
+
+        (base_taskflow.BaseTaskFlowEngine._taskflow_load.
+         assert_called_once_with(
+             _flow_mock,
+             store={constants.DISTRIBUTOR: _distributor_mock,
+                    constants.UPDATE_DICT: _update_distributor_mock}))
+
+        _flow_mock.run.assert_called_once_with()
+        self.assertEqual(1, mock_distributor_repo_get.call_count)
+
+    @mock.patch('octavia.controller.worker.flows.distributor_flows.'
+                'DistributorFlows.get_delete_distributor_flows',
+                return_value=_flow_mock)
+    def test_delete_distributor(self,
+                                mock_get_create_distributor_flow,
+                                mock_api_get_session,
+                                mock_dyn_log_listener,
+                                mock_taskflow_load,
+                                mock_distributor_repo_get,
+                                mock_pool_repo_get,
+                                mock_member_repo_get,
+                                mock_l7rule_repo_get,
+                                mock_l7policy_repo_get,
+                                mock_listener_repo_get,
+                                mock_lb_repo_get,
+                                mock_health_mon_repo_get,
+                                mock_amp_repo_get):
+        _flow_mock.reset_mock()
+        _distributor_mock.distributor_driver = "l3"
+
+        cw = controller_worker.ControllerWorker()
+        cw.delete_distributor(DISTRIBUTOR_ID)
+
+        (base_taskflow.BaseTaskFlowEngine._taskflow_load.
+         assert_called_once_with(
+             _flow_mock,
+             store={constants.DISTRIBUTOR: _distributor_mock}))
+
+        _flow_mock.run.assert_called_once_with()
+        self.assertEqual(1, mock_distributor_repo_get.call_count)

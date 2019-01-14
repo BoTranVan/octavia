@@ -36,6 +36,7 @@ class TaskUtils(object):
         self.amp_health_repo = repo.AmphoraHealthRepository()
         self.l7policy_repo = repo.L7PolicyRepository()
         self.l7rule_repo = repo.L7RuleRepository()
+        self.distributor_repo = repo.DistributorRepository()
         super(TaskUtils, self).__init__(**kwargs)
 
     def unmark_amphora_health_busy(self, amphora_id):
@@ -233,6 +234,41 @@ class TaskUtils(object):
             LOG.error("Failed to update pool %(pool)s "
                       "provisioning status to ERROR due to: "
                       "%(except)s", {'pool': pool_id, 'except': e})
+
+    def mark_distributor_prov_status_error(self, distributor_id):
+        """Sets a distributor provisioning status to ERROR.
+
+        NOTE: This should only be called from revert methods.
+
+        :param distributor_id: Distributor ID to set provisioning
+                                status to ERROR
+        """
+        try:
+            self.distributor_repo.update(db_apis.get_session(),
+                                         id=distributor_id,
+                                         provisioning_status=constants.ERROR)
+        except Exception as e:
+            LOG.error("Failed to update distributor %(distributor)s "
+                      "provisioning status to ERROR due to: "
+                      "%(except)s", {'distributor': distributor_id,
+                                     'except': e})
+
+    def mark_distributor_prov_status_active(self, distributor_id):
+        """Sets a distributor provisioning status to ACTIVE.
+
+        NOTE: This should only be called from revert methods.
+
+        :param distributor_id: Distributor ID to set provisioning
+                            status to ACTIVE
+        """
+        try:
+            self.distributor_repo.update(db_apis.get_session(),
+                                         id=distributor_id,
+                                         provisioning_status=constants.ACTIVE)
+        except Exception as e:
+            LOG.error("Failed to update distributor %(list)s "
+                      "provisioning status to ACTIVE due to: "
+                      "%(except)s", {'list': distributor_id, 'except': e})
 
     def get_current_loadbalancer_from_db(self, loadbalancer_id):
         """Gets a Loadbalancer from db.

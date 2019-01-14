@@ -18,12 +18,14 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 from sqlalchemy.orm import exc as db_exceptions
+from stevedore import driver as stevedore_driver
 from taskflow.listeners import logging as tf_logging
 import tenacity
 
 from octavia.common import base_taskflow
 from octavia.common import constants
 from octavia.controller.worker.flows import amphora_flows
+from octavia.controller.worker.flows import distributor_flows
 from octavia.controller.worker.flows import health_monitor_flows
 from octavia.controller.worker.flows import l7policy_flows
 from octavia.controller.worker.flows import l7rule_flows
@@ -59,6 +61,7 @@ class ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._pool_flows = pool_flows.PoolFlows()
         self._l7policy_flows = l7policy_flows.L7PolicyFlows()
         self._l7rule_flows = l7rule_flows.L7RuleFlows()
+        self._distributor_flows = distributor_flows.DistributorFlows()
 
         self._amphora_repo = repo.AmphoraRepository()
         self._amphora_health_repo = repo.AmphoraHealthRepository()
@@ -70,6 +73,7 @@ class ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._l7policy_repo = repo.L7PolicyRepository()
         self._l7rule_repo = repo.L7RuleRepository()
         self._flavor_repo = repo.FlavorRepository()
+        self._distributor_repo = repo.DistributorRepository()
 
         self._exclude_result_logging_tasks = (
             constants.ROLE_STANDALONE + '-' +
@@ -811,6 +815,78 @@ class ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         with tf_logging.DynamicLoggingListener(update_l7rule_tf,
                                                log=LOG):
             update_l7rule_tf.run()
+
+    @tenacity.retry(
+        retry=tenacity.retry_if_exception_type(db_exceptions.NoResultFound),
+        wait=tenacity.wait_incrementing(
+            RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
+        stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
+    def create_distributor(self, distributor_id):
+        """Creates a distributor.
+
+        :param distributor_id: ID of the distributor to create
+        :returns: None
+        :raises NoResultFound: Unable to find the object
+        """
+        distributor = self._distributor_repo.get(db_apis.get_session(),
+                                                 id=distributor_id)
+        if not distributor:
+            LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
+                        '60 seconds.', 'distributor', distributor_id)
+            raise db_exceptions.NoResultFound
+        distributor_driver = stevedore_driver.DriverManager(
+            namespace='octavia.distributor.drivers',
+            name=distributor.distributor_driver, invoke_on_load=True).driver
+
+        create_distributor_tf = self._taskflow_load(
+            self._distributor_flows.get_create_distributor_flows(
+                distributor_driver),
+            store={constants.DISTRIBUTOR: distributor})
+        with tf_logging.DynamicLoggingListener(create_distributor_tf,
+                                               log=LOG):
+            create_distributor_tf.run()
+
+    def delete_distributor(self, distributor_id):
+        """Deletes a distributor.
+
+        :param distributor_id: ID of the distributor to delete
+        :returns: None
+        :raises DistributorNotFound: The referenced distributor was not found
+        """
+        distributor = self._distributor_repo.get(db_apis.get_session(),
+                                                 id=distributor_id)
+        distributor_driver = stevedore_driver.DriverManager(
+            namespace='octavia.distributor.drivers',
+            name=distributor.distributor_driver, invoke_on_load=True).driver
+        delete_distributor_tf = self._taskflow_load(
+            self._distributor_flows.get_delete_distributor_flows(
+                distributor_driver),
+            store={constants.DISTRIBUTOR: distributor})
+        with tf_logging.DynamicLoggingListener(delete_distributor_tf,
+                                               log=LOG):
+            delete_distributor_tf.run()
+
+    def update_distributor(self, distributor_id, distributor_updates):
+        """Updates a distributor.
+
+        :param distributor_id: ID of the distributor to update
+        :param distributor_updates: Dict containing updated distributor
+        :returns: None
+        :raises DistributorlNotFound: The referenced distributor was not found
+        """
+        distributor = self._distributor_repo.get(db_apis.get_session(),
+                                                 id=distributor_id)
+        distributor_driver = stevedore_driver.DriverManager(
+            namespace='octavia.distributor.drivers',
+            name=distributor.distributor_driver, invoke_on_load=True).driver
+        update_distributor_tf = self._taskflow_load(
+            self._distributor_flows.get_update_distributor_flows(
+                distributor_driver),
+            store={constants.DISTRIBUTOR: distributor,
+                   constants.UPDATE_DICT: distributor_updates})
+        with tf_logging.DynamicLoggingListener(update_distributor_tf,
+                                               log=LOG):
+            update_distributor_tf.run()
 
     def _perform_amphora_failover(self, amp, priority):
         """Internal method to perform failover operations for an amphora.

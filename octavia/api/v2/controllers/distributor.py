@@ -26,6 +26,7 @@ from wsmeext import pecan as wsme_pecan
 
 from octavia.api.drivers import data_models as driver_dm
 from octavia.api.drivers import driver_factory
+from octavia.api.drivers import exceptions as driver_exceptions
 from octavia.api.drivers import utils as driver_utils
 from octavia.api.v2.controllers import base
 from octavia.api.v2.types import distributor as distributor_types
@@ -39,7 +40,9 @@ LOG = logging.getLogger(__name__)
 
 support_distributor_type = {
     'noop': 'octavia.distributor.drivers.noop_driver.'
-            'driver.NoopDistributorDriver'}
+            'driver.NoopDistributorDriver',
+    'l3': 'octavia.distributor.drivers.l3_driver.driver.'
+          'L3DistributorDriver'}
 
 
 class DistributorController(base.BaseController):
@@ -131,7 +134,15 @@ class DistributorController(base.BaseController):
                 option='distributor_driver')
         distributor_driver_cls = importutils.import_class(
             support_distributor_type.get(distributor.distributor_driver))
-        distributor_driver_cls.validate_config_data(config_data_dict)
+        try:
+            distributor_driver_cls.validate_config_data(config_data_dict)
+        except driver_exceptions.UnsupportedOptionError as e:
+            LOG.info("The '%s' type distributor raised an unsupported option "
+                     "error: %s", distributor.distributor_driver,
+                     e.operator_fault_string)
+            raise exceptions.DistributorUnsupportOptionError(
+                type=distributor.distributor_driver,
+                user_msg=e.user_fault_string)
 
         driver = driver_factory.get_driver(CONF.distributor.api_driver)
 
@@ -199,7 +210,15 @@ class DistributorController(base.BaseController):
             distributor_driver_cls = importutils.import_class(
                 support_distributor_type.get(
                     db_distributor.distributor_driver))
-            distributor_driver_cls.validate_config_data(config_data_dict)
+            try:
+                distributor_driver_cls.validate_config_data(config_data_dict)
+            except driver_exceptions.UnsupportedOptionError as e:
+                LOG.info("The '%s' type distributor raised an unsupported "
+                         "option error: %s", db_distributor.distributor_driver,
+                         e.operator_fault_string)
+                raise exceptions.DistributorUnsupportOptionError(
+                    type=db_distributor.distributor_driver,
+                    user_msg=e.user_fault_string)
 
         driver = driver_factory.get_driver(CONF.distributor.api_driver)
 
