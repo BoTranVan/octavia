@@ -591,6 +591,23 @@ quota_opts = [
                help=_('Default per project l7rule quota.')),
 ]
 
+clusterquota_opts = [
+    cfg.IntOpt('cluster_total_loadbalancers', default=-1,
+               help=_("Maximum number of loadbalancers a cluster")),
+    cfg.IntOpt('max_listeners_per_loadbalancer', default=-1,
+               help=_("Maximum number of listeners per loadbalancer")),
+    cfg.IntOpt('max_pools_per_loadbalancer', default=-1,
+               help=_("Maximum number of pools per loadbalancer")),
+    cfg.IntOpt('max_members_per_pool', default=-1,
+               help=_("Maximum number of members per pool")),
+    cfg.IntOpt('max_l7policies_per_listener', default=-1,
+               help=_("Maximum number of l7policies per listener")),
+    cfg.IntOpt('max_l7rules_per_l7policy', default=-1,
+               help=_("Maximum number of l7rules per l7policy")),
+    cfg.IntOpt('max_healthmonitors_per_pool', default=-1,
+               help=_("Maximum number of healthmonitors per pool")),
+]
+
 
 # Register the configuration options
 cfg.CONF.register_opts(core_opts)
@@ -611,6 +628,7 @@ cfg.CONF.register_opts(nova_opts, group='nova')
 cfg.CONF.register_opts(glance_opts, group='glance')
 cfg.CONF.register_opts(neutron_opts, group='neutron')
 cfg.CONF.register_opts(quota_opts, group='quotas')
+cfg.CONF.register_opts(clusterquota_opts, group='clusterquotas')
 
 
 # Ensure that the control exchange is set correctly

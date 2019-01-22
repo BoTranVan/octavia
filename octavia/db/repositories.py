@@ -183,6 +183,7 @@ class Repositories(object):
         self.amp_build_slots = AmphoraBuildSlotsRepository()
         self.amp_build_req = AmphoraBuildReqRepository()
         self.quotas = QuotasRepository()
+        self.clusterquotas = ClusterQuotasRepository()
 
     def create_load_balancer_and_vip(self, session, lb_dict, vip_dict):
         """Inserts load balancer and vip entities into the database.
@@ -299,6 +300,156 @@ class Repositories(object):
             self.l7policy.update(session, l7policy_id,
                                  provisioning_status=lb_prov_status)
         return success
+
+    def check_clusterquota_met(self, session, _class,
+                               base_res_id=None, count=1):
+        """Checks and updates object cluster quotas.
+
+        This method makes sure the project has available cluster quota
+        for the resource and updates the cluster quota to reflect the
+        new ussage.
+
+        :param session: Context database session
+        :param _class: Data model object requesting cluster quota
+        :param count: Number of objects we're going to create (default=1)
+        :param base_res_id: ID of base resource. For example:
+                            loadbalancer ID for max_listeners_per_loadbalancer
+        :returns: True if cluster quota is met,
+                  False if cluster quota was available
+        """
+        LOG.debug('Checking clusterquota for '
+                  'object: %(obj)s',
+                  {'obj': _class})
+
+        clusterquotas_cnt = self.clusterquotas.count(session)
+        if clusterquotas_cnt > 0:
+            clusterquotas = session.query(models.ClusterQuotas).first()
+        else:
+            clusterquotas = None
+        if _class == data_models.LoadBalancer:
+            # Decide which quota to use
+            if (clusterquotas is None or
+                    clusterquotas.cluster_total_loadbalancers is None):
+                lb_quota = CONF.clusterquotas.cluster_total_loadbalancers
+            else:
+                lb_quota = clusterquotas.cluster_total_loadbalancers
+            # Get the current in use count
+            lb_count = session.query(models.LoadBalancer).filter(
+                    models.LoadBalancer.provisioning_status !=
+                    consts.DELETED).count() + count
+            # Decide if the cluster quota is met
+            if lb_count <= lb_quota or lb_quota == consts.QUOTA_UNLIMITED:
+                return False
+            return True
+        elif _class == data_models.Listener:
+            # Decide which quota to use
+            if (clusterquotas is None or
+                    clusterquotas.max_listeners_per_loadbalancer is None):
+                listener_quota = (CONF.clusterquotas.
+                                  max_listeners_per_loadbalancer)
+            else:
+                listener_quota = (clusterquotas.
+                                  max_listeners_per_loadbalancer)
+            # Get the current in use count
+            listener_count = session.query(models.Listener).filter(
+                    models.Listener.load_balancer_id == base_res_id,
+                    models.Listener.provisioning_status !=
+                    consts.DELETED).count() + count
+            # Decide if the quota is met
+            if (listener_count <= listener_quota or
+                    listener_quota == consts.QUOTA_UNLIMITED):
+                return False
+            return True
+        elif _class == data_models.Pool:
+            # Decide which quota to use
+            if (clusterquotas is None or
+                    clusterquotas.max_pools_per_loadbalancer is None):
+                pool_quota = CONF.clusterquotas.max_pools_per_loadbalancer
+            else:
+                pool_quota = (clusterquotas.
+                              max_pools_per_loadbalancer)
+            # Get the current in use count
+            pool_count = session.query(models.Pool).filter(
+                models.Pool.load_balancer_id == base_res_id,
+                models.Pool.provisioning_status !=
+                consts.DELETED).count() + count
+            # Decide if the quota is met
+            if (pool_count <= pool_quota or
+                    pool_quota == consts.QUOTA_UNLIMITED):
+                return False
+            return True
+        elif _class == data_models.HealthMonitor:
+            # Decide which quota to use
+            if (clusterquotas is None or
+                    clusterquotas.max_healthmonitors_per_pool is None):
+                hm_quota = CONF.clusterquotas.max_healthmonitors_per_pool
+            else:
+                hm_quota = clusterquotas.max_healthmonitors_per_pool
+            # Get the current in use count
+            hm_count = session.query(models.HealthMonitor).filter(
+                models.HealthMonitor.pool_id == base_res_id,
+                models.health_monitor.provisioning_status !=
+                consts.DELETED).count() + count
+            # Decide if the quota is met
+            if (hm_count <= hm_quota or
+                    hm_quota == consts.QUOTA_UNLIMITED):
+                return False
+            return True
+        elif _class == data_models.Member:
+            # Decide which quota to use
+            if (clusterquotas is None or
+                    clusterquotas.max_members_per_pool is None):
+                member_quota = CONF.clusterquotas.max_members_per_pool
+            else:
+                member_quota = (clusterquotas.
+                                max_members_per_pool)
+            # Get the current in use count
+            member_count = session.query(models.Member).filter(
+                models.Member.pool_id == base_res_id,
+                models.Member.provisioning_status !=
+                consts.DELETED).count() + count
+            # Decide if the quota is met
+            if (member_count <= member_quota or
+                    member_quota == consts.QUOTA_UNLIMITED):
+                return False
+            return True
+        elif _class == data_models.L7Policy:
+            # Decide which quota to use
+            if (clusterquotas is None or
+                    clusterquotas.max_l7policies_per_listener is None):
+                l7policy_quota = CONF.clusterquotas.max_l7policies_per_listener
+            else:
+                l7policy_quota = (clusterquotas.
+                                  max_l7policies_per_listener)
+            # Get the current in use count
+            l7policy_count = session.query(models.L7Policy).filter(
+                models.L7Policy.listener_id == base_res_id,
+                models.L7Policy.provisioning_status !=
+                consts.DELETED).count() + count
+            # Decide if the quota is met
+            if (l7policy_count <= l7policy_quota or
+                    l7policy_quota == consts.QUOTA_UNLIMITED):
+                return False
+            return True
+        elif _class == data_models.L7Rule:
+            # Decide which quota to use
+            if (clusterquotas is None or
+                    clusterquotas.max_l7rules_per_l7policy is None):
+                l7rule_quota = CONF.clusterquotas.max_l7rules_per_l7policy
+            else:
+                l7rule_quota = (clusterquotas.
+                                max_l7rules_per_l7policy)
+            # Get the current in use count
+            l7rule_count = session.query(models.L7Rule).filter(
+                models.L7Rule.l7policy_id == base_res_id,
+                models.L7Rule.provisioning_status !=
+                consts.DELETED).count() + count
+            # Decide if the quota is met
+            if (l7rule_count <= l7rule_quota or
+                    l7rule_quota == consts.QUOTA_UNLIMITED):
+                return False
+            return True
+        return False
 
     def check_quota_met(self, session, lock_session, _class, project_id,
                         count=1):
@@ -1820,3 +1971,43 @@ class QuotasRepository(BaseRepository):
             quotas.l7policy = None
             quotas.l7rule = None
             session.flush()
+
+
+class ClusterQuotasRepository(BaseRepository):
+    model_class = models.ClusterQuotas
+
+    # This is used with an autocommit session (non-lock_session)
+    # Since it is for initial cluster quota record creation it locks the table
+    # which can lead to recoverable deadlocks. Thus we use the deadlock
+    # retry wrapper here. This may not be appropriate for other sessions
+    # and or queries. Use with caution.
+    @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
+    def update(self, session, **model_kwargs):
+        with session.begin(subtransactions=True):
+            kwargs_clusterquota = model_kwargs['clusterquota']
+            clusterquotas = session.query(self.model_class).filter_by(
+                id=consts.CLUSTERQUOTA_DB_ID).with_for_update().first()
+            if not clusterquotas:
+                clusterquotas = models.ClusterQuotas(
+                    id=consts.CLUSTERQUOTA_DB_ID
+                )
+
+            for key, val in kwargs_clusterquota.items():
+                setattr(clusterquotas, key, val)
+            session.add(clusterquotas)
+            session.flush()
+        return self.get(session, id=consts.CLUSTERQUOTA_DB_ID)
+
+    def delete(self, session):
+        with session.begin(subtransactions=True):
+            clusterquotas = session.query(self.model_class).filter_by(
+                id=consts.CLUSTERQUOTA_DB_ID).with_for_update().first()
+            if clusterquotas:
+                clusterquotas.cluster_total_loadbalancers = None
+                clusterquotas.max_healthmonitors_per_pool = None
+                clusterquotas.max_listeners_per_loadbalancer = None
+                clusterquotas.max_members_per_pool = None
+                clusterquotas.max_pools_per_loadbalancer = None
+                clusterquotas.max_l7policies_per_listener = None
+                clusterquotas.max_l7rules_per_l7policy = None
+                session.flush()

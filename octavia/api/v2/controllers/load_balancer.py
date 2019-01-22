@@ -260,6 +260,11 @@ class LoadBalancersController(base.BaseController):
 
         lock_session = db_api.get_session(autocommit=False)
         try:
+            if self.repositories.check_clusterquota_met(
+                    context.session,
+                    data_models.LoadBalancer):
+                raise exceptions.ClusterQuotaException(
+                    resource=data_models.LoadBalancer._name())
             if self.repositories.check_quota_met(
                     context.session,
                     lock_session,
@@ -399,6 +404,13 @@ class LoadBalancersController(base.BaseController):
                     detail="Pool '{name}' was referenced but no full "
                            "definition was found.".format(name=pool_ref))
 
+        # Check cluster quotas for pools.
+        if pools and self.repositories.check_clusterquota_met(
+                session, data_models.Pool, base_res_id=db_lb.id,
+                count=len(pools)):
+            raise exceptions.ClusterQuotaException(
+                resource=data_models.Pool._name())
+
         # Check quotas for pools.
         if pools and self.repositories.check_quota_met(
                 session, lock_session, data_models.Pool, db_lb.project_id,
@@ -423,6 +435,13 @@ class LoadBalancersController(base.BaseController):
                 session, lock_session, p))
             new_pools.append(new_pool)
             pool_name_ids[new_pool.name] = new_pool.id
+
+        # Now check cluster quotas for listeners
+        if listeners and self.repositories.check_clusterquota_met(
+                session, data_models.Listener, base_res_id=db_lb.id,
+                count=len(listeners)):
+            raise exceptions.ClusterQuotaException(
+                resource=data_models.Listener._name())
 
         # Now check quotas for listeners
         if listeners and self.repositories.check_quota_met(

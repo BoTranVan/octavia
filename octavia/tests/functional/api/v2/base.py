@@ -65,6 +65,9 @@ class BaseAPITest(base_db_test.OctaviaDBTestBase):
     QUOTA_PATH = QUOTAS_PATH + '/{project_id}'
     QUOTA_DEFAULT_PATH = QUOTAS_PATH + '/{project_id}/default'
 
+    CLUSTERQUOTAS_PATH = '/lbaas/clusterquotas'
+    CLUSTERQUOTAS_DEFAULT_PATH = CLUSTERQUOTAS_PATH + '/default'
+
     AMPHORAE_PATH = '/octavia/amphorae'
     AMPHORA_PATH = AMPHORAE_PATH + '/{amphora_id}'
     AMPHORA_FAILOVER_PATH = AMPHORA_PATH + '/failover'
@@ -319,6 +322,28 @@ class BaseAPITest(base_db_test.OctaviaDBTestBase):
         req_dict = {k: v for k, v in req_dict.items() if v is not None}
         body = {'quota': req_dict}
         path = self.QUOTA_PATH.format(project_id=project_id)
+        response = self.put(path, body, status=202)
+        return response.json
+
+    def set_clusterquota(self,
+                         cluster_total_loadbalancers=None,
+                         max_healthmonitors_per_pool=None,
+                         max_listeners_per_loadbalancer=None,
+                         max_members_per_pool=None,
+                         max_pools_per_loadbalancer=None,
+                         max_l7policies_per_listener=None,
+                         max_l7rules_per_l7policy=None):
+        req_dict = {'cluster_total_loadbalancers': cluster_total_loadbalancers,
+                    'max_healthmonitors_per_pool': max_healthmonitors_per_pool,
+                    'max_listeners_per_loadbalancer':
+                        max_listeners_per_loadbalancer,
+                    'max_members_per_pool': max_members_per_pool,
+                    'max_pools_per_loadbalancer': max_pools_per_loadbalancer,
+                    'max_l7policies_per_listener': max_l7policies_per_listener,
+                    'max_l7rules_per_l7policy': max_l7rules_per_l7policy}
+        req_dict = {k: v for k, v in req_dict.items() if v is not None}
+        body = {'clusterquota': req_dict}
+        path = self.CLUSTERQUOTAS_PATH
         response = self.put(path, body, status=202)
         return response.json
 

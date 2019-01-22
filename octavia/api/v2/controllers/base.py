@@ -218,6 +218,61 @@ class BaseController(rest.RestController):
         return {model.__tablename__: get_statii_for_model(model)
                 for model in usage_types}
 
+    def _get_default_clusterquotas(self):
+        """Gets the cluster's default quotas."""
+        clusterquotas = data_models.ClusterQuotas(
+            id=constants.CLUSTERQUOTA_DB_ID,
+            cluster_total_loadbalancers=(CONF.clusterquotas.
+                                         cluster_total_loadbalancers),
+            max_healthmonitors_per_pool=(CONF.clusterquotas.
+                                         max_healthmonitors_per_pool),
+            max_listeners_per_loadbalancer=(CONF.clusterquotas.
+                                            max_listeners_per_loadbalancer),
+            max_members_per_pool=(CONF.clusterquotas.
+                                  max_members_per_pool),
+            max_pools_per_loadbalancer=(CONF.clusterquotas.
+                                        max_pools_per_loadbalancer),
+            max_l7policies_per_listener=(CONF.clusterquotas.
+                                         max_l7policies_per_listener),
+            max_l7rules_per_l7policy=(CONF.clusterquotas.
+                                      max_l7rules_per_l7policy))
+        return clusterquotas
+
+    def _get_db_clusterquotas(self, session):
+        """Gets the cluster's quotas from the database, or responds with the
+
+        default cluster quotas.
+        """
+        db_clusterquotas = self.repositories.clusterquotas.get(
+            session, id=constants.CLUSTERQUOTA_DB_ID)
+        if not db_clusterquotas:
+            LOG.debug("No cluster quotas set")
+            db_clusterquotas = self._get_default_clusterquotas()
+        else:
+            # Fill in any that are using the configured defaults
+            if db_clusterquotas.cluster_total_loadbalancers is None:
+                db_clusterquotas.cluster_total_loadbalancers = (
+                    CONF.clusterquotas.cluster_total_loadbalancers)
+            if db_clusterquotas.max_healthmonitors_per_pool is None:
+                db_clusterquotas.max_healthmonitors_per_pool = (
+                    CONF.clusterquotas.max_healthmonitors_per_pool)
+            if db_clusterquotas.max_listeners_per_loadbalancer is None:
+                db_clusterquotas.max_listeners_per_loadbalancer = (
+                    CONF.clusterquotas.max_listeners_per_loadbalancer)
+            if db_clusterquotas.max_members_per_pool is None:
+                db_clusterquotas.max_members_per_pool = (
+                    CONF.clusterquotas.max_members_per_pool)
+            if db_clusterquotas.max_pools_per_loadbalancer is None:
+                db_clusterquotas.max_pools_per_loadbalancer = (
+                    CONF.clusterquotas.max_pools_per_loadbalancer)
+            if db_clusterquotas.max_l7policies_per_listener is None:
+                db_clusterquotas.max_l7policies_per_listener = (
+                    CONF.clusterquotas.max_l7policies_per_listener)
+            if db_clusterquotas.max_l7rules_per_l7policy is None:
+                db_clusterquotas.max_l7rules_per_l7policy = (
+                    CONF.clusterquotas.max_l7rules_per_l7policy)
+        return db_clusterquotas
+
     def _auth_get_all(self, context, project_id):
         # Check authorization to list objects under all projects
         action = '{rbac_obj}{action}'.format(

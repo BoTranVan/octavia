@@ -219,6 +219,12 @@ class PoolsController(base.BaseController):
 
         lock_session = db_api.get_session(autocommit=False)
         try:
+            if self.repositories.check_clusterquota_met(
+                    context.session,
+                    data_models.Pool,
+                    base_res_id=pool.loadbalancer_id):
+                raise exceptions.ClusterQuotaException(
+                    resource=data_models.Pool._name())
             if self.repositories.check_quota_met(
                     context.session,
                     lock_session,
@@ -272,6 +278,13 @@ class PoolsController(base.BaseController):
         db_pool = self._validate_create_pool(
             lock_session, pool_dict)
 
+        # Check cluster quotas for healthmonitors
+        if hm and self.repositories.check_clusterquota_met(
+                session, data_models.HealthMonitor,
+                base_res_id=db_pool.id):
+            raise exceptions.ClusterQuotaException(
+                resource=data_models.HealthMonitor._name())
+
         # Check quotas for healthmonitors
         if hm and self.repositories.check_quota_met(
                 session, lock_session, data_models.HealthMonitor,
@@ -287,6 +300,13 @@ class PoolsController(base.BaseController):
             new_hm = health_monitor.HealthMonitorController()._graph_create(
                 lock_session, hm)
             db_pool.health_monitor = new_hm
+
+        # Now check cluster quotas for members
+        if members and self.repositories.check_clusterquota_met(
+                session, data_models.Member,
+                base_res_id=db_pool.id, count=len(members)):
+            raise exceptions.ClusterQuotaException(
+                resource=data_models.Member._name())
 
         # Now check quotas for members
         if members and self.repositories.check_quota_met(

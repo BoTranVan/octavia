@@ -21,6 +21,7 @@ from sqlalchemy.orm import validates
 from sqlalchemy.sql import func
 
 from octavia.api.v2.types import amphora
+from octavia.api.v2.types import clusterquotas
 from octavia.api.v2.types import health_monitor
 from octavia.api.v2.types import l7policy
 from octavia.api.v2.types import l7rule
@@ -665,3 +666,20 @@ class Quotas(base_models.BASE):
     in_use_pool = sa.Column(sa.Integer(), nullable=True)
     in_use_l7policy = sa.Column(sa.Integer(), nullable=True)
     in_use_l7rule = sa.Column(sa.Integer(), nullable=True)
+
+
+class ClusterQuotas(base_models.BASE, base_models.IdMixin):
+
+    __data_model__ = data_models.ClusterQuotas
+
+    __tablename__ = "cluster_quotas"
+
+    __v2_wsme__ = clusterquotas.ClusterQuotaBase
+
+    cluster_total_loadbalancers = sa.Column(sa.Integer(), nullable=True)
+    max_healthmonitors_per_pool = sa.Column(sa.Integer(), nullable=True)
+    max_listeners_per_loadbalancer = sa.Column(sa.Integer(), nullable=True)
+    max_members_per_pool = sa.Column(sa.Integer(), nullable=True)
+    max_pools_per_loadbalancer = sa.Column(sa.Integer(), nullable=True)
+    max_l7policies_per_listener = sa.Column(sa.Integer(), nullable=True)
+    max_l7rules_per_l7policy = sa.Column(sa.Integer(), nullable=True)

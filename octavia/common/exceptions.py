@@ -285,6 +285,11 @@ class QuotaException(APIException):
     code = 403
 
 
+class ClusterQuotaException(APIException):
+    msg = _('Cluster Quota has been met for resources: %(resource)s')
+    code = 403
+
+
 class ProjectBusyException(APIException):
     msg = _('Project busy.  Unable to lock the project.  Please try again.')
     code = 503

@@ -62,6 +62,7 @@ class BaseRepositoryTest(base.OctaviaDBTestBase):
         self.l7policy_repo = repo.L7PolicyRepository()
         self.l7rule_repo = repo.L7RuleRepository()
         self.quota_repo = repo.QuotasRepository()
+        self.clusterquota_repo = repo.ClusterQuotasRepository()
 
     def test_get_all_return_value(self):
         pool_list, _ = self.pool_repo.get_all(self.session,
@@ -109,7 +110,8 @@ class AllRepositoriesTest(base.OctaviaDBTestBase):
                            'session_persistence', 'pool', 'member', 'listener',
                            'listener_stats', 'amphora', 'sni',
                            'amphorahealth', 'vrrpgroup', 'l7rule', 'l7policy',
-                           'amp_build_slots', 'amp_build_req', 'quotas')
+                           'amp_build_slots', 'amp_build_req', 'quotas',
+                           'clusterquotas')
         for repo_attr in repo_attr_names:
             single_repo = getattr(self.repos, repo_attr, None)
             message = ("Class Repositories should have %s instance"
@@ -4777,3 +4779,82 @@ class TestQuotasRepository(BaseRepositoryTest):
         self.assertRaises(exceptions.NotFound,
                           self.quota_repo.delete,
                           self.session, 'bogus')
+
+
+class TestClusterQuotasRepository(BaseRepositoryTest):
+
+    def setUp(self):
+        super(TestClusterQuotasRepository, self).setUp()
+
+    def update_clusterquotas(self,
+                             cluster_total_loadbalancers=20,
+                             max_healthmonitors_per_pool=20,
+                             max_listeners_per_loadbalancer=20,
+                             max_members_per_pool=20,
+                             max_pools_per_loadbalancer=20,
+                             max_l7policies_per_listener=20,
+                             max_l7rules_per_l7policy=20):
+        clusterquota = {
+                 'cluster_total_loadbalancers': cluster_total_loadbalancers,
+                 'max_healthmonitors_per_pool': max_healthmonitors_per_pool,
+                 'max_listeners_per_loadbalancer':
+                 max_listeners_per_loadbalancer,
+                 'max_members_per_pool': max_members_per_pool,
+                 'max_pools_per_loadbalancer': max_pools_per_loadbalancer,
+                 'max_l7policies_per_listener': max_l7policies_per_listener,
+                 'max_l7rules_per_l7policy': max_l7rules_per_l7policy}
+        clusterquotas = self.clusterquota_repo.update(self.session,
+                                                      clusterquota=clusterquota
+                                                      )
+        return clusterquotas
+
+    def _compare(self, expected, observed):
+        self.assertEqual(expected.id, observed.id)
+        self.assertEqual(expected.cluster_total_loadbalancers,
+                         observed.cluster_total_loadbalancers)
+        self.assertEqual(expected.max_healthmonitors_per_pool,
+                         observed.max_healthmonitors_per_pool)
+        self.assertEqual(expected.max_listeners_per_loadbalancer,
+                         observed.max_listeners_per_loadbalancer)
+        self.assertEqual(expected.max_members_per_pool,
+                         observed.max_members_per_pool)
+        self.assertEqual(expected.max_pools_per_loadbalancer,
+                         observed.max_pools_per_loadbalancer)
+        self.assertEqual(expected.max_l7policies_per_listener,
+                         observed.max_l7policies_per_listener)
+        self.assertEqual(expected.max_l7rules_per_l7policy,
+                         observed.max_l7rules_per_l7policy)
+
+    def test_get(self):
+        expected = self.update_clusterquotas()
+        observed = self.clusterquota_repo.get(self.session)
+        self.assertIsInstance(observed, models.ClusterQuotas)
+        self._compare(expected, observed)
+
+    def test_update(self):
+        first_expected = self.update_clusterquotas()
+        first_observed = self.clusterquota_repo.get(self.session)
+        second_expected = self.update_clusterquotas(
+            cluster_total_loadbalancers=1)
+        second_observed = self.clusterquota_repo.get(self.session)
+        self.assertIsInstance(first_expected, models.ClusterQuotas)
+        self._compare(first_expected, first_observed)
+        self.assertIsInstance(second_expected, models.ClusterQuotas)
+        self._compare(second_expected, second_observed)
+        self.assertIsNot(first_expected.cluster_total_loadbalancers,
+                         second_expected.cluster_total_loadbalancers)
+
+    def test_delete(self):
+        expected = self.update_clusterquotas()
+        observed = self.clusterquota_repo.get(self.session)
+        self.assertIsInstance(observed, models.ClusterQuotas)
+        self._compare(expected, observed)
+        self.clusterquota_repo.delete(self.session)
+        observed = self.clusterquota_repo.get(self.session)
+        self.assertIsNone(observed.cluster_total_loadbalancers)
+        self.assertIsNone(observed.max_healthmonitors_per_pool)
+        self.assertIsNone(observed.max_listeners_per_loadbalancer)
+        self.assertIsNone(observed.max_members_per_pool)
+        self.assertIsNone(observed.max_pools_per_loadbalancer)
+        self.assertIsNone(observed.max_l7policies_per_listener)
+        self.assertIsNone(observed.max_l7rules_per_l7policy)

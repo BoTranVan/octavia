@@ -211,6 +211,12 @@ class HealthMonitorController(base.BaseController):
 
         lock_session = db_api.get_session(autocommit=False)
         try:
+            if self.repositories.check_clusterquota_met(
+                    context.session,
+                    data_models.HealthMonitor,
+                    base_res_id=health_monitor.pool_id):
+                raise exceptions.ClusterQuotaException(
+                    resource=data_models.HealthMonitor._name())
             if self.repositories.check_quota_met(
                     context.session,
                     lock_session,

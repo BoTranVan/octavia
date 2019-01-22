@@ -15,6 +15,7 @@ import itertools
 
 from octavia.policies import amphora
 from octavia.policies import base
+from octavia.policies import clusterquota
 from octavia.policies import healthmonitor
 from octavia.policies import l7policy
 from octavia.policies import l7rule
@@ -39,6 +40,7 @@ def list_rules():
         pool.list_rules(),
         provider.list_rules(),
         quota.list_rules(),
+        clusterquota.list_rules(),
         amphora.list_rules(),
         usage.list_rules(),
     )

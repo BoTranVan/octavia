@@ -719,3 +719,23 @@ class Quotas(BaseDataModel):
         self.in_use_pool = in_use_pool
         self.in_use_l7policy = in_use_l7policy
         self.in_use_l7rule = in_use_l7rule
+
+
+class ClusterQuotas(BaseDataModel):
+
+    def __init__(self, id=None,
+                 cluster_total_loadbalancers=None,
+                 max_healthmonitors_per_pool=None,
+                 max_listeners_per_loadbalancer=None,
+                 max_members_per_pool=None,
+                 max_pools_per_loadbalancer=None,
+                 max_l7policies_per_listener=None,
+                 max_l7rules_per_l7policy=None):
+        self.id = id
+        self.cluster_total_loadbalancers = cluster_total_loadbalancers
+        self.max_healthmonitors_per_pool = max_healthmonitors_per_pool
+        self.max_listeners_per_loadbalancer = max_listeners_per_loadbalancer
+        self.max_members_per_pool = max_members_per_pool
+        self.max_pools_per_loadbalancer = max_pools_per_loadbalancer
+        self.max_l7policies_per_listener = max_l7policies_per_listener
+        self.max_l7rules_per_l7policy = max_l7rules_per_l7policy
