@@ -34,7 +34,7 @@ class AgentJinjaTemplater(object):
         self.agent_template = jinja_env.get_template(
             constants.AGENT_CONF_TEMPLATE)
 
-    def build_agent_config(self, amphora_id):
+    def build_agent_config(self, amphora_id, topology):
         return self.agent_template.render(
             {'enable_tls': CONF.amphora_agent.enable_tls,
              'agent_server_ca':
@@ -62,4 +62,4 @@ class AgentJinjaTemplater(object):
              'respawn_count': CONF.haproxy_amphora.respawn_count,
              'respawn_interval': CONF.haproxy_amphora.respawn_interval,
              'amphora_udp_driver': CONF.amphora_agent.amphora_udp_driver,
-             'topology': CONF.controller_worker.loadbalancer_topology})
+             'topology': topology})
