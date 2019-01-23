@@ -330,6 +330,7 @@ AMP_COMPUTE_CONNECTIVITY_WAIT = 'octavia-amp-compute-connectivity-wait'
 AMP_LISTENER_UPDATE = 'octavia-amp-listeners-update'
 
 GENERATE_SERVER_PEM_TASK = 'GenerateServerPEMTask'
+AMPHORA_CONFIG_UPDATE_TASK = 'AmphoraConfigUpdateTask'
 
 # Batch Member Update constants
 MEMBERS = 'members'
