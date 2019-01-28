@@ -24,6 +24,7 @@ import six
 from stevedore import driver as stevedore_driver
 
 from octavia.amphorae.driver_exceptions import exceptions as driver_except
+from octavia.amphorae.drivers.bgp import bgp_rest_driver
 from octavia.amphorae.drivers import driver_base
 from octavia.amphorae.drivers.haproxy import exceptions as exc
 from octavia.amphorae.drivers.keepalived import vrrp_rest_driver
@@ -44,7 +45,8 @@ CONF = cfg.CONF
 
 class HaproxyAmphoraLoadBalancerDriver(
     driver_base.AmphoraLoadBalancerDriver,
-        vrrp_rest_driver.KeepalivedAmphoraDriverMixin):
+        vrrp_rest_driver.KeepalivedAmphoraDriverMixin,
+        bgp_rest_driver.BGPAmphoraDriverMixin):
 
     def __init__(self):
         super(HaproxyAmphoraLoadBalancerDriver, self).__init__()
@@ -327,6 +329,12 @@ class AmphoraAPIClient(object):
                                            consts.AMP_ACTION_STOP)
         self.reload_vrrp = functools.partial(self._vrrp_action,
                                              consts.AMP_ACTION_RELOAD)
+        self.start_bgp_speaker = functools.partial(self._bgp_action,
+                                                   consts.AMP_ACTION_START)
+        self.stop_bpg_speaker = functools.partial(self._bgp_action,
+                                                  consts.AMP_ACTION_STOP)
+        self.reload_bpg_speaker = functools.partial(self._bgp_action,
+                                                    consts.AMP_ACTION_RELOAD)
 
         self.session = requests.Session()
         if CONF.amphora_agent.enable_tls:
@@ -527,4 +535,16 @@ class AmphoraAPIClient(object):
 
     def update_agent_config(self, amp, agent_config, timeout_dict=None):
         r = self.put(amp, 'config', timeout_dict, data=agent_config)
+        return exc.check_exception(r)
+
+    def upload_bgp_config(self, amp, config):
+        r = self.put(amp, 'bgp/upload', data=config)
+        return exc.check_exception(r)
+
+    def _bgp_action(self, action, amp):
+        r = self.put(amp, 'bgp/{action}'.format(action=action))
+        return exc.check_exception(r)
+
+    def register_to_distributor(self, amp):
+        r = self.put(amp, 'bgp/register_amphora')
         return exc.check_exception(r)

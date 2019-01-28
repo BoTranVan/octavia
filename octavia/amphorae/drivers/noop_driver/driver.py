@@ -182,5 +182,20 @@ class NoopAmphoraLoadBalancerDriver(
     def reload_vrrp_service(self, loadbalancer):
         pass
 
-    def get_vrrp_interface(self, amphora):
+    def get_vrrp_interface(self, amphora, timeout_dict=None):
+        pass
+
+    def get_frontend_interface(self, amphora, timeout_dict=None):
+        pass
+
+    def update_bgp_conf(self, loadbalancer, distributor):
+        pass
+
+    def stop_bgp_service(self, loadbalancer):
+        pass
+
+    def start_bgp_service(self, loadbalancer):
+        pass
+
+    def register_to_distributor(self, loadbalancer):
         pass

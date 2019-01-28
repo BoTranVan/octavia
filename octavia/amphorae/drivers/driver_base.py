@@ -320,3 +320,28 @@ class VRRPDriverMixin(object):
         :param amphora: amphora object
         """
         pass
+
+
+@six.add_metaclass(abc.ABCMeta)
+class BGPDriverMixin(object):
+    """Abstract mixin class for BGP support in loadbalancer amphorae
+
+    Usage: To plug BGP support in another service driver XYZ, use:
+    @plug_mixin(XYZ)
+    class XYZ: ...
+    """
+    @abc.abstractmethod
+    def update_bgp_conf(self, loadbalancer):
+        """Update amphorae of the loadbalancer with a new BGP configuration
+
+        :param loadbalancer: loadbalancer object
+        """
+        pass
+
+    @abc.abstractmethod
+    def get_frontend_interface(self, amphora, timeout_dict=None):
+        """Get the front_end interface object for a specific amphora
+
+        :param amphora: amphora object
+        """
+        pass

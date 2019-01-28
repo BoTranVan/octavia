@@ -1077,3 +1077,36 @@ class TestAmphoraAPIClientTest(base.TestCase):
         self.assertRaises(exc.InternalServerError,
                           self.driver.update_agent_config, self.amp,
                           "some_file")
+
+    @requests_mock.mock()
+    def test_bgp_active(self, m):
+        action = 'start'
+        m.put("{base}/bgp/{action}".format(base=self.base_url, action=action))
+        self.driver._bgp_action(action, self.amp)
+        self.assertTrue(m.called)
+
+    @requests_mock.mock()
+    def test_upload_bgp_config(self, m):
+        m.put("{base}/bgp/upload".format(base=self.base_url))
+        resp_body = self.driver.upload_bgp_config(self.amp, "some_file")
+        self.assertEqual(200, resp_body.status_code)
+
+    @requests_mock.mock()
+    def test_upload_bgp_config_error(self, m):
+        m.put("{base}/bgp/upload".format(base=self.base_url), status_code=500)
+        self.assertRaises(exc.InternalServerError,
+                          self.driver.upload_bgp_config, self.amp,
+                          "some_file")
+
+    @requests_mock.mock()
+    def test_register_to_distributor(self, m):
+        m.put("{base}/bgp/register_amphora".format(base=self.base_url))
+        resp_body = self.driver.register_to_distributor(self.amp)
+        self.assertEqual(200, resp_body.status_code)
+
+    @requests_mock.mock()
+    def test_register_to_distributor_error(self, m):
+        m.put("{base}/bgp/register_amphora".format(base=self.base_url),
+              status_code=500)
+        self.assertRaises(exc.InternalServerError,
+                          self.driver.register_to_distributor, self.amp)
