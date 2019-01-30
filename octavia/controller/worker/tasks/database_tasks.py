@@ -420,12 +420,15 @@ class UpdateAmphoraVIPData(BaseDatabaseTask):
         :returns: None
         """
         for amp_data in amps_data:
-            self.repos.amphora.update(db_apis.get_session(), amp_data.id,
-                                      vrrp_ip=amp_data.vrrp_ip,
-                                      ha_ip=amp_data.ha_ip,
-                                      vrrp_port_id=amp_data.vrrp_port_id,
-                                      ha_port_id=amp_data.ha_port_id,
-                                      vrrp_id=1)
+            self.repos.amphora.update(
+                db_apis.get_session(), amp_data.id,
+                vrrp_ip=amp_data.vrrp_ip,
+                ha_ip=amp_data.ha_ip,
+                vrrp_port_id=amp_data.vrrp_port_id,
+                ha_port_id=amp_data.ha_port_id,
+                vrrp_id=1,
+                frontend_port_id=amp_data.frontend_port_id,
+                frontend_ip=amp_data.frontend_ip)
 
 
 class UpdateAmpFailoverDetails(BaseDatabaseTask):
@@ -616,6 +619,27 @@ class MarkAmphoraStandAloneInDB(_MarkAmphoraRoleAndPriorityInDB):
         :returns: None
         """
         amp_role = constants.ROLE_STANDALONE
+        self._execute(amphora, amp_role, None)
+
+    def revert(self, result, amphora, *args, **kwargs):
+        """Removes amphora role association.
+
+        :param amphora: Amphora to update role.
+        :returns: None
+        """
+        self._revert(result, amphora, *args, **kwargs)
+
+
+class MarkAmphoraActiveInDB(_MarkAmphoraRoleAndPriorityInDB):
+    """Alter the amphora as ACTIVE in db."""
+
+    def execute(self, amphora):
+        """Mark amphora as ACTIVE in db.
+
+        :param amphora: Amphora to update  role.
+        :returns: None
+        """
+        amp_role = constants.ROLE_ACTIVE
         self._execute(amphora, amp_role, None)
 
     def revert(self, result, amphora, *args, **kwargs):

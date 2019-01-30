@@ -447,7 +447,7 @@ class TestNetworkTasks(base.TestCase):
         mock_driver.plug_vip.return_value = ["vip"]
 
         data = net.execute(LB)
-        mock_driver.plug_vip.assert_called_once_with(LB, LB.vip)
+        mock_driver.plug_vip.assert_called_once_with(LB, LB.vip, None)
         self.assertEqual(["vip"], data)
 
         # revert

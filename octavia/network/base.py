@@ -112,7 +112,7 @@ class AbstractNetworkDriver(object):
         pass
 
     @abc.abstractmethod
-    def plug_vip(self, load_balancer, vip):
+    def plug_vip(self, load_balancer, vip, subnet_id=None):
         """Plugs a virtual ip as the frontend connection of a load balancer.
 
         Sets up the routing of traffic from the vip to the load balancer

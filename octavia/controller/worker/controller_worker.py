@@ -346,12 +346,15 @@ class ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                         '60 seconds.', 'load_balancer', load_balancer_id)
             raise db_exceptions.NoResultFound
 
+        distributor = getattr(lb, "distributor", None)
+
         # TODO(johnsom) convert this to octavia_lib constant flavor
         # once octavia is transitioned to use octavia_lib
         store = {constants.LOADBALANCER_ID: load_balancer_id,
                  constants.BUILD_TYPE_PRIORITY:
                  constants.LB_CREATE_NORMAL_PRIORITY,
-                 constants.FLAVOR: flavor}
+                 constants.FLAVOR: flavor,
+                 constants.DISTRIBUTOR: distributor}
 
         topology = lb.topology
 
@@ -360,7 +363,8 @@ class ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         }
 
         create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
-            topology=topology, listeners=lb.listeners)
+            topology=topology, distributor=distributor,
+            flavor=flavor, listeners=lb.listeners)
 
         create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
         with tf_logging.DynamicLoggingListener(

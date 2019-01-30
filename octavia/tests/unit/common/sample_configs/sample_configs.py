@@ -23,11 +23,12 @@ from octavia.tests.unit.common.sample_configs import sample_certs
 CONF = cfg.CONF
 
 
-def sample_amphora_tuple():
+def sample_amphora_tuple(frontend_ip=None,
+                         frontend_port_id=None, status='ACTIVE'):
     in_amphora = collections.namedtuple(
         'amphora', 'id, lb_network_ip, vrrp_ip, ha_ip, vrrp_port_id, '
                    'ha_port_id, role, status, vrrp_interface,'
-                   'vrrp_priority')
+                   'vrrp_priority, frontend_ip, frontend_port_id')
     return in_amphora(
         id='sample_amphora_id_1',
         lb_network_ip='10.0.1.1',
@@ -36,9 +37,11 @@ def sample_amphora_tuple():
         vrrp_port_id='1234',
         ha_port_id='1234',
         role=None,
-        status='ACTIVE',
+        status=status,
         vrrp_interface=None,
-        vrrp_priority=None)
+        vrrp_priority=None,
+        frontend_ip=frontend_ip,
+        frontend_port_id=frontend_port_id)
 
 RET_PERSISTENCE = {
     'type': 'HTTP_COOKIE',
@@ -440,8 +443,14 @@ def sample_loadbalancer_tuple(proto=None, monitor=True, persistence=True,
     proto = 'HTTP' if proto is None else proto
     topology = 'SINGLE' if topology is None else topology
     in_lb = collections.namedtuple(
-        'load_balancer', 'id, name, protocol, vip, listeners, amphorae,'
-        ' enabled')
+        'load_balancer', 'id, name, protocol, vip, topology, listeners, '
+        'amphorae, enabled')
+    if topology == 'ACTIVE_ACTIVE':
+        amphorae = [sample_amphora_tuple(frontend_ip='10.10.10.6',
+                                         frontend_port_id='fake_port_id',
+                                         status='ALLOCATED')]
+    else:
+        amphorae = [sample_amphora_tuple()]
     return in_lb(
         id='sample_loadbalancer_id_1',
         name='test-lb',
@@ -455,6 +464,7 @@ def sample_loadbalancer_tuple(proto=None, monitor=True, persistence=True,
                                          sni=sni,
                                          l7=l7,
                                          enabled=enabled)],
+        amphorae=amphorae,
         enabled=enabled
     )
 
@@ -466,12 +476,18 @@ def sample_listener_loadbalancer_tuple(proto=None, topology=None,
     in_lb = collections.namedtuple(
         'load_balancer', 'id, name, protocol, vip, amphorae, topology, '
         'enabled')
+    if topology == 'ACTIVE_ACTIVE':
+        amphorae = sample_amphora_tuple(frontend_ip='10.10.10.6',
+                                        frontend_port_id='fake_port_id',
+                                        status='ALLOCATED')
+    else:
+        amphorae = sample_amphora_tuple()
     return in_lb(
         id='sample_loadbalancer_id_1',
         name='test-lb',
         protocol=proto,
         vip=sample_vip_tuple(),
-        amphorae=[sample_amphora_tuple()],
+        amphorae=[amphorae],
         topology=topology,
         enabled=enabled
     )
@@ -500,7 +516,7 @@ def sample_vip_tuple():
 def sample_listener_tuple(proto=None, monitor=True, alloc_default_pool=True,
                           persistence=True, persistence_type=None,
                           persistence_cookie=None, persistence_timeout=None,
-                          persistence_granularity=None,
+                          persistence_granularity=None, load_balancer=None,
                           tls=False, sni=False, peer_port=None, topology=None,
                           l7=False, enabled=True, insert_headers=None,
                           be_proto=None, monitor_ip_port=False,
@@ -514,6 +530,9 @@ def sample_listener_tuple(proto=None, monitor=True, alloc_default_pool=True,
     if be_proto is None:
         be_proto = 'HTTP' if proto is 'TERMINATED_HTTPS' else proto
     topology = 'SINGLE' if topology is None else topology
+    load_balancer = (sample_listener_loadbalancer_tuple(
+                     proto=proto, topology=topology) if
+                     load_balancer is None else load_balancer)
     port = '443' if proto is 'HTTPS' or proto is 'TERMINATED_HTTPS' else '80'
     peer_port = 1024 if peer_port is None else peer_port
     insert_headers = insert_headers or {}
@@ -559,8 +578,7 @@ def sample_listener_tuple(proto=None, monitor=True, alloc_default_pool=True,
         project_id='12345',
         protocol_port=port,
         protocol=proto,
-        load_balancer=sample_listener_loadbalancer_tuple(proto=proto,
-                                                         topology=topology),
+        load_balancer=load_balancer,
         peer_port=peer_port,
         default_pool=sample_pool_tuple(
             proto=be_proto, monitor=monitor, persistence=persistence,

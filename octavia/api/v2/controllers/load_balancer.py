@@ -289,6 +289,9 @@ class LoadBalancersController(base.BaseController):
             constants.LOADBALANCER_TOPOLOGY,
             CONF.controller_worker.loadbalancer_topology)
 
+        lb_dict[constants.DISTRIBUTOR_ID] = flavor_dict.get(
+            constants.DISTRIBUTOR)
+
         return flavor_dict
 
     def _validate_flavor(self, session, load_balancer):

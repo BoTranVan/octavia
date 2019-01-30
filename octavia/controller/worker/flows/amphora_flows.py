@@ -111,6 +111,10 @@ class AmphoraFlows(object):
             post_map_amp_to_lb.add(database_tasks.MarkAmphoraStandAloneInDB(
                 name=sf_name + '-' + constants.MARK_AMP_STANDALONE_INDB,
                 requires=constants.AMPHORA))
+        elif role == constants.ROLE_ACTIVE:
+            post_map_amp_to_lb.add(database_tasks.MarkAmphoraActiveInDB(
+                name=sf_name + '-' + constants.MARK_AMP_ACTIVE_INDB,
+                requires=constants.AMPHORA))
 
         return post_map_amp_to_lb
 
@@ -221,6 +225,11 @@ class AmphoraFlows(object):
             create_amp_for_lb_subflow.add(
                 database_tasks.MarkAmphoraStandAloneInDB(
                     name=sf_name + '-' + constants.MARK_AMP_STANDALONE_INDB,
+                    requires=constants.AMPHORA))
+        elif role == constants.ROLE_ACTIVE:
+            create_amp_for_lb_subflow.add(
+                database_tasks.MarkAmphoraActiveInDB(
+                    name=sf_name + '-' + constants.MARK_AMP_ACTIVE_INDB,
                     requires=constants.AMPHORA))
 
         return create_amp_for_lb_subflow

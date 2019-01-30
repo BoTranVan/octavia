@@ -656,6 +656,15 @@ distributor_opts = [
                       "as 'amphora' in production environment")),
 ]
 
+active_active_opts = [
+    cfg.IntOpt('default_max_amphora_num', default=3,
+               help=_('Default max number of amphora pre active-active'
+                      'load balancer')),
+    cfg.IntOpt('default_min_amphora_num', default=3,
+               help=_('Default min number of amphora pre active-active'
+                      'load balancer')),
+]
+
 # Register the configuration options
 cfg.CONF.register_opts(core_opts)
 cfg.CONF.register_opts(api_opts, group='api_settings')
@@ -678,6 +687,7 @@ cfg.CONF.register_opts(quota_opts, group='quotas')
 cfg.CONF.register_opts(clusterquota_opts, group='clusterquotas')
 cfg.CONF.register_opts(distributor_opts, group='distributor')
 cfg.CONF.register_opts(bgp_opts, group='bgp')
+cfg.CONF.register_opts(active_active_opts, group='active_active')
 
 # Ensure that the control exchange is set correctly
 messaging.set_transport_defaults(control_exchange='octavia')

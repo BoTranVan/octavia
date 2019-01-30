@@ -53,7 +53,7 @@ class NoopManager(object):
         self.networkconfigconfig[vip.ip_address] = (vip,
                                                     'deallocate_vip')
 
-    def plug_vip(self, loadbalancer, vip):
+    def plug_vip(self, loadbalancer, vip, subnet_id=None):
         LOG.debug("Network %s no-op, plug_vip loadbalancer %s, vip %s",
                   self.__class__.__name__,
                   loadbalancer.id, vip.ip_address)
@@ -232,8 +232,8 @@ class NoopNetworkDriver(driver_base.AbstractNetworkDriver):
     def deallocate_vip(self, vip):
         self.driver.deallocate_vip(vip)
 
-    def plug_vip(self, loadbalancer, vip):
-        return self.driver.plug_vip(loadbalancer, vip)
+    def plug_vip(self, loadbalancer, vip, subnet_id=None):
+        return self.driver.plug_vip(loadbalancer, vip, subnet_id)
 
     def unplug_vip(self, loadbalancer, vip):
         self.driver.unplug_vip(loadbalancer, vip)

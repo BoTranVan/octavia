@@ -276,6 +276,57 @@ class AmphoraCertUpload(BaseAmphoraTask):
         self.amphora_driver.upload_cert_amp(amphora, server_pem)
 
 
+class AmphoraUpdateFrontendInterface(BaseAmphoraTask):
+    """Task to get and update the frontend interface name from amphora."""
+
+    def execute(self, loadbalancer):
+        """Execute post_vip_routine."""
+        amps = []
+        timeout_dict = {
+            constants.CONN_MAX_RETRIES:
+                CONF.haproxy_amphora.active_connection_max_retries,
+            constants.CONN_RETRY_INTERVAL:
+                CONF.haproxy_amphora.active_connection_rety_interval}
+        for amp in six.moves.filter(
+            lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
+                loadbalancer.amphorae):
+
+            try:
+                interface = self.amphora_driver.get_frontend_interface(
+                    amp, timeout_dict=timeout_dict)
+            except Exception as e:
+                LOG.error('Failed to get amphora frontend interface on '
+                          'amphora %s. Skipping this amphora as it is failing '
+                          'due to: %s', amp.id, str(e))
+                self.amphora_repo.update(db_apis.get_session(), amp.id,
+                                         status=constants.ERROR)
+                continue
+
+            self.amphora_repo.update(db_apis.get_session(), amp.id,
+                                     frontend_interface=interface)
+            amps.append(self.amphora_repo.get(db_apis.get_session(),
+                                              id=amp.id))
+        loadbalancer.amphorae = amps
+        return loadbalancer
+
+    def revert(self, result, loadbalancer, *args, **kwargs):
+        """Handle a failed amphora vip plug notification."""
+        if isinstance(result, failure.Failure):
+            return
+        LOG.warning("Reverting Get Amphora Frontend Interface.")
+        for amp in six.moves.filter(
+            lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
+                loadbalancer.amphorae):
+
+            try:
+                self.amphora_repo.update(db_apis.get_session(), amp.id,
+                                         frontend_interface=None)
+            except Exception as e:
+                LOG.error("Failed to update amphora %(amp)s "
+                          "Frontend interface to None due to: %(except)s",
+                          {'amp': amp.id, 'except': e})
+
+
 class AmphoraUpdateVRRPInterface(BaseAmphoraTask):
     """Task to get and update the VRRP interface device name from amphora."""
 

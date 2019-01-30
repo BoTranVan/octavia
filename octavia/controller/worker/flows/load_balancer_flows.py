@@ -15,6 +15,7 @@
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from stevedore import driver as stevedore_driver
 from taskflow.patterns import linear_flow
 from taskflow.patterns import unordered_flow
 
@@ -42,7 +43,8 @@ class LoadBalancerFlows(object):
         self.pool_flows = pool_flows.PoolFlows()
         self.member_flows = member_flows.MemberFlows()
 
-    def get_create_load_balancer_flow(self, topology, listeners=None):
+    def get_create_load_balancer_flow(self, topology, listeners=None,
+                                      distributor=None, flavor=None):
         """Creates a conditional graph flow that allocates a loadbalancer to
 
         two spare amphorae.
@@ -59,6 +61,8 @@ class LoadBalancerFlows(object):
             lb_create_flow.add(*self._create_active_standby_topology())
         elif topology == constants.TOPOLOGY_SINGLE:
             lb_create_flow.add(*self._create_single_topology())
+        elif topology == constants.TOPOLOGY_ACTIVE_ACTIVE:
+            lb_create_flow.add(*self._create_active_active_topology(flavor))
         else:
             LOG.error("Unknown topology: %s.  Unable to build load balancer.",
                       topology)
@@ -67,12 +71,24 @@ class LoadBalancerFlows(object):
         post_amp_prefix = constants.POST_LB_AMP_ASSOCIATION_SUBFLOW
         lb_create_flow.add(
             self.get_post_lb_amp_association_flow(
-                post_amp_prefix, topology, mark_active=(not listeners)))
+                post_amp_prefix, topology, distributor,
+                mark_active=(not listeners)))
 
         if listeners:
             lb_create_flow.add(*self._create_listeners_flow())
 
         return lb_create_flow
+
+    def _create_active_active_topology(
+            self, flavor, lf_name=constants.CREATE_LOADBALANCER_FLOW):
+        amps_flow = unordered_flow.Flow(lf_name)
+        amphora_num = (flavor['min_amphora_num'] if flavor['min_amphora_num']
+                       else CONF.active_active.default_min_amphora_num)
+        for i in range(0, amphora_num):
+            amps_flow.add(self.amp_flows.get_amphora_for_lb_subflow(
+                prefix=(constants.ROLE_ACTIVE + '-' + str(i)),
+                role=constants.ROLE_ACTIVE))
+        return amps_flow
 
     def _create_single_topology(self):
         return (self.amp_flows.get_amphora_for_lb_subflow(
@@ -151,7 +167,7 @@ class LoadBalancerFlows(object):
         return flows
 
     def get_post_lb_amp_association_flow(self, prefix, topology,
-                                         mark_active=True):
+                                         distributor=None, mark_active=True):
         """Reload the loadbalancer and create networking subflows for
 
         created/allocated amphorae.
@@ -179,6 +195,10 @@ class LoadBalancerFlows(object):
             vrrp_subflow = self.amp_flows.get_vrrp_subflow(prefix)
             post_create_LB_flow.add(vrrp_subflow)
 
+        if topology == constants.TOPOLOGY_ACTIVE_ACTIVE:
+            bgp_subflow = self._get_distributor_flows(prefix, distributor)
+            post_create_LB_flow.add(bgp_subflow)
+
         post_create_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
         if mark_active:
@@ -186,6 +206,21 @@ class LoadBalancerFlows(object):
                 name=sf_name + '-' + constants.MARK_LB_ACTIVE_INDB,
                 requires=constants.LOADBALANCER))
         return post_create_LB_flow
+
+    def _get_distributor_flows(self, prefix, distributor):
+        distributor_driver = stevedore_driver.DriverManager(
+            namespace='octavia.distributor.drivers',
+            name=distributor.distributor_driver, invoke_on_load=True).driver
+        sf_name = prefix + '-' + constants.GET_BGP_SUBFLOW
+        distributor_subflow = linear_flow.Flow(sf_name)
+        distributor_subflow.add(
+            amphora_driver_tasks.AmphoraUpdateFrontendInterface(
+                name=sf_name + '-' + constants.AMP_UPDATE_FRONTEND_INTF,
+                requires=constants.LOADBALANCER,
+                provides=constants.LOADBALANCER))
+        distributor_subflow.add(
+            *distributor_driver.get_register_amphorae_subflow())
+        return distributor_subflow
 
     def _get_delete_listeners_flow(self, lb):
         """Sets up an internal delete flow

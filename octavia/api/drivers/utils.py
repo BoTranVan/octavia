@@ -101,6 +101,8 @@ def lb_dict_to_provider_dict(lb_dict, vip=None,
                              db_pools=None, db_listeners=None):
     new_lb_dict = _base_to_provider_dict(lb_dict, include_project_id=True)
     new_lb_dict['loadbalancer_id'] = new_lb_dict.pop('id')
+    if 'distributor_id' in new_lb_dict:
+        del new_lb_dict['distributor_id']
     if vip:
         new_lb_dict['vip_address'] = vip.ip_address
         new_lb_dict['vip_network_id'] = vip.network_id
@@ -124,7 +126,7 @@ def db_loadbalancer_to_provider_loadbalancer(db_loadbalancer):
         db_listeners=db_loadbalancer.listeners)
     for unsupported_field in ['server_group_id', 'amphorae',
                               'vrrp_group', 'topology', 'vip',
-                              'distributor_id']:
+                              'distributor_id', 'distributor']:
         if unsupported_field in new_loadbalancer_dict:
             del new_loadbalancer_dict[unsupported_field]
     provider_loadbalancer = driver_dm.LoadBalancer.from_dict(

@@ -15,6 +15,7 @@
 
 from octavia.common import constants
 from octavia.common.jinja.haproxy import jinja_cfg
+from octavia.common import utils
 from octavia.tests.unit import base
 from octavia.tests.unit.common.sample_configs import sample_configs
 
@@ -866,3 +867,24 @@ class TestHaproxyCfg(base.TestCase):
         self.assertEqual(
             sample_configs.sample_base_expected_config(defaults=defaults),
             rendered_obj)
+
+    def test_render_active_active_loadbalancer_obj(self):
+        j_cfg = jinja_cfg.JinjaTemplater(
+            base_amp_path='/var/lib/octavia',
+            base_crt_dir='/var/lib/octavia/certs',
+            connection_logging=False)
+        lb = sample_configs.sample_listener_loadbalancer_tuple(
+            topology='ACTIVE_ACTIVE')
+        listener = sample_configs.sample_listener_tuple(load_balancer=lb)
+        defaults = ("defaults\n"
+                    "    no log\n"
+                    "    retries 3\n"
+                    "    option redispatch\n\n")
+        peers = ("peers sample_listener_id_1_peers\n"
+                 "    peer {peer1} 10.10.10.6:1024\n\n\n").format(
+                     peer1=utils.base64_sha1_string(
+                         lb.amphorae[0].id).replace('=', ''))
+        ref_conf = sample_configs.sample_base_expected_config(
+            defaults=defaults, peers=peers)
+        rendered_obj = j_cfg.render_loadbalancer_obj(lb.amphorae[0], listener)
+        self.assertEqual(ref_conf, rendered_obj)

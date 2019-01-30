@@ -77,7 +77,8 @@ class TestFlavorCapabilities(base.BaseAPITest):
     def test_amphora_driver(self):
         ref_description = ("The load balancer topology. One of: SINGLE - One "
                            "amphora per load balancer. ACTIVE_STANDBY - Two "
-                           "amphora per load balancer.")
+                           "amphora per load balancer. ACTIVE_ACTIVE - "
+                           "Multiple amphora per load balancer.")
         result = self.get(
             self.FLAVOR_CAPABILITIES_PATH.format(provider='amphora'))
         capabilities = result.json.get(self.root_tag)

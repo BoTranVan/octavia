@@ -435,18 +435,21 @@ class TestControllerWorker(base.TestCase):
             constants.LOADBALANCER_ID: LB_ID,
             'update_dict': {'topology': constants.TOPOLOGY_SINGLE},
             constants.BUILD_TYPE_PRIORITY: constants.LB_CREATE_NORMAL_PRIORITY,
-            constants.FLAVOR: None
+            constants.FLAVOR: None,
+            constants.DISTRIBUTOR: None
         }
         lb_mock = mock.MagicMock()
         lb_mock.listeners = []
         lb_mock.topology = constants.TOPOLOGY_SINGLE
+        lb_mock.distributor = None
         mock_lb_repo_get.side_effect = [None, None, None, lb_mock]
 
         cw = controller_worker.ControllerWorker()
         cw.create_load_balancer(LB_ID)
 
         mock_get_create_load_balancer_flow.assert_called_with(
-            topology=constants.TOPOLOGY_SINGLE, listeners=[])
+            topology=constants.TOPOLOGY_SINGLE, listeners=[],
+            distributor=None, flavor=None)
         mock_taskflow_load.assert_called_with(
             mock_get_create_load_balancer_flow.return_value, store=store)
         mock_eng.run.assert_any_call()
@@ -476,6 +479,9 @@ class TestControllerWorker(base.TestCase):
             loadbalancer_topology=constants.TOPOLOGY_ACTIVE_STANDBY)
 
         _flow_mock.reset_mock()
+        lb_mock = mock.MagicMock()
+        lb_mock.distributor = None
+        mock_lb_repo_get.return_value = lb_mock
         mock_taskflow_load.reset_mock()
         mock_eng = mock.Mock()
         mock_taskflow_load.return_value = mock_eng
@@ -483,7 +489,8 @@ class TestControllerWorker(base.TestCase):
             constants.LOADBALANCER_ID: LB_ID,
             'update_dict': {'topology': constants.TOPOLOGY_ACTIVE_STANDBY},
             constants.BUILD_TYPE_PRIORITY: constants.LB_CREATE_NORMAL_PRIORITY,
-            constants.FLAVOR: None
+            constants.FLAVOR: None,
+            constants.DISTRIBUTOR: None
         }
         setattr(mock_lb_repo_get.return_value, 'topology',
                 constants.TOPOLOGY_ACTIVE_STANDBY)
@@ -493,6 +500,7 @@ class TestControllerWorker(base.TestCase):
         cw.create_load_balancer(LB_ID)
 
         mock_get_create_load_balancer_flow.assert_called_with(
+            distributor=None, flavor=None,
             topology=constants.TOPOLOGY_ACTIVE_STANDBY, listeners=[])
         mock_taskflow_load.assert_called_with(
             mock_get_create_load_balancer_flow.return_value, store=store)
@@ -531,7 +539,8 @@ class TestControllerWorker(base.TestCase):
             constants.LOADBALANCER_ID: LB_ID,
             'update_dict': {'topology': constants.TOPOLOGY_SINGLE},
             constants.BUILD_TYPE_PRIORITY: constants.LB_CREATE_NORMAL_PRIORITY,
-            constants.FLAVOR: None
+            constants.FLAVOR: None,
+            constants.DISTRIBUTOR: None
         }
 
         cw = controller_worker.ControllerWorker()
@@ -540,6 +549,7 @@ class TestControllerWorker(base.TestCase):
         # mock_create_single_topology.assert_called_once()
         # mock_create_active_standby_topology.assert_not_called()
         mock_get_create_load_balancer_flow.assert_called_with(
+            distributor=None, flavor=None,
             topology=constants.TOPOLOGY_SINGLE, listeners=lb.listeners)
         mock_taskflow_load.assert_called_with(
             mock_get_create_load_balancer_flow.return_value, store=store)
@@ -585,13 +595,15 @@ class TestControllerWorker(base.TestCase):
             constants.LOADBALANCER_ID: LB_ID,
             'update_dict': {'topology': constants.TOPOLOGY_ACTIVE_STANDBY},
             constants.BUILD_TYPE_PRIORITY: constants.LB_CREATE_NORMAL_PRIORITY,
-            constants.FLAVOR: None
+            constants.FLAVOR: None,
+            constants.DISTRIBUTOR: None
         }
 
         cw = controller_worker.ControllerWorker()
         cw.create_load_balancer(LB_ID)
 
         mock_get_create_load_balancer_flow.assert_called_with(
+            distributor=None, flavor=None,
             topology=constants.TOPOLOGY_ACTIVE_STANDBY, listeners=lb.listeners)
         mock_taskflow_load.assert_called_with(
             mock_get_create_load_balancer_flow.return_value, store=store)

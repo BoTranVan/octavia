@@ -82,10 +82,13 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
                 return interface
         return None
 
-    def _plug_amphora_vip(self, amphora, subnet):
+    def _plug_amphora_vip(self, amphora, subnet, topology):
         # We need a vip port owned by Octavia for Act/Stby and failover
         try:
-            port = {'port': {'name': 'octavia-lb-vrrp-' + amphora.id,
+            port_name = 'octavia-lb-vrrp-' + amphora.id
+            if topology == constants.TOPOLOGY_ACTIVE_ACTIVE:
+                port_name = 'octavia-lb-frentend-' + amphora.id
+            port = {'port': {'name': port_name,
                              'network_id': subnet.network_id,
                              'fixed_ips': [{'subnet_id': subnet.id}],
                              'admin_state_up': True,
@@ -315,7 +318,10 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
         """
         for amphora in vip.load_balancer.amphorae:
             try:
-                self.neutron_client.delete_port(amphora.vrrp_port_id)
+                auxiliary_port_id = (amphora.vrrp_port_id if
+                                     amphora.vrrp_port_id else
+                                     amphora.frontend_port_id)
+                self.neutron_client.delete_port(auxiliary_port_id)
             except (neutron_client_exceptions.NotFound,
                     neutron_client_exceptions.PortNotFoundClient):
                 LOG.debug('VIP instance port %s already deleted. Skipping.',
@@ -347,11 +353,11 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
             LOG.info("Port %s will not be deleted by Octavia as it was "
                      "not created by Octavia.", vip.port_id)
 
-    def plug_vip(self, load_balancer, vip):
+    def plug_vip(self, load_balancer, vip, subnet_id=None):
         if self.sec_grp_enabled:
             self._update_vip_security_group(load_balancer, vip)
         plugged_amphorae = []
-        subnet = self.get_subnet(vip.subnet_id)
+        subnet = self.get_subnet(subnet_id if subnet_id else vip.subnet_id)
         for amphora in six.moves.filter(
             lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
                 load_balancer.amphorae):
@@ -359,25 +365,38 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
             interface = self._get_plugged_interface(
                 amphora.compute_id, subnet.network_id, amphora.lb_network_ip)
             if not interface:
-                interface = self._plug_amphora_vip(amphora, subnet)
+                interface = self._plug_amphora_vip(amphora, subnet,
+                                                   load_balancer.topology)
 
             self._add_vip_address_pair(interface.port_id, vip.ip_address)
             if self.sec_grp_enabled:
                 self._add_vip_security_group_to_port(load_balancer.id,
                                                      interface.port_id)
-            vrrp_ip = None
+            auxiliary_ip = None
             for fixed_ip in interface.fixed_ips:
                 is_correct_subnet = fixed_ip.subnet_id == subnet.id
                 is_management_ip = fixed_ip.ip_address == amphora.lb_network_ip
                 if is_correct_subnet and not is_management_ip:
-                    vrrp_ip = fixed_ip.ip_address
+                    auxiliary_ip = fixed_ip.ip_address
                     break
+            if load_balancer.topology == constants.TOPOLOGY_ACTIVE_ACTIVE:
+                vrrp_ip = None
+                vrrp_port_id = None
+                frontend_ip = auxiliary_ip
+                frontend_port_id = interface.port_id
+            else:
+                vrrp_ip = auxiliary_ip
+                vrrp_port_id = interface.port_id
+                frontend_ip = None
+                frontend_port_id = None
             plugged_amphorae.append(data_models.Amphora(
                 id=amphora.id,
                 compute_id=amphora.compute_id,
                 vrrp_ip=vrrp_ip,
                 ha_ip=vip.ip_address,
-                vrrp_port_id=interface.port_id,
+                vrrp_port_id=vrrp_port_id,
+                frontend_ip=frontend_ip,
+                frontend_port_id=frontend_port_id,
                 ha_port_id=vip.port_id))
         return plugged_amphorae
 
@@ -425,7 +444,61 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
         new_port = utils.convert_port_dict_to_model(new_port)
         return self._port_to_vip(new_port, load_balancer)
 
+    def _unplug_frontend_port(self, load_balancer):
+        try:
+            frontend_subnet = load_balancer.distributor.frontend_subnet
+            subnet = self.get_subnet(frontend_subnet)
+        except base.SubnetNotFound:
+            msg = ("Can't unplug frontend ip because frontend subnet {0} "
+                   "was not found").format(frontend_subnet)
+            LOG.exception(msg)
+            raise base.PluggedVIPNotFound(msg)
+        for amphora in six.moves.filter(
+            lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
+                load_balancer.amphorae):
+
+            interface = self._get_plugged_interface(
+                amphora.compute_id, subnet.network_id, amphora.lb_network_ip)
+            if not interface:
+                # Thought about raising PluggedVIPNotFound exception but
+                # then that wouldn't evaluate all amphorae, so just continue
+                LOG.debug('Cannot get amphora %s interface, skipped',
+                          amphora.compute_id)
+                continue
+            try:
+                self.unplug_network(amphora.compute_id, subnet.network_id)
+            except Exception:
+                pass
+            try:
+                aap_update = {'port': {
+                    'allowed_address_pairs': []
+                }}
+                self.neutron_client.update_port(interface.port_id,
+                                                aap_update)
+            except Exception:
+                message = _('Error unplugging frontend port. Could not clear '
+                            'allowed address pairs from port '
+                            '{port_id}.').format(port_id=interface.port_id)
+                LOG.exception(message)
+                raise base.UnplugVIPException(message)
+
+            # Delete the VRRP port if we created it
+            try:
+                port = self.get_port(amphora.frontend_port_id)
+                if port.name.startswith('octavia-lb-frentend-'):
+                    self.neutron_client.delete_port(amphora.frontend_port_id)
+            except (neutron_client_exceptions.NotFound,
+                    neutron_client_exceptions.PortNotFoundClient):
+                pass
+            except Exception as e:
+                LOG.error('Failed to delete port.  Resources may still be in '
+                          'use for port: %(port)s due to error: %s(except)s',
+                          {'port': amphora.frontend_port_id, 'except': e})
+
     def unplug_vip(self, load_balancer, vip):
+        if load_balancer.topology == constants.TOPOLOGY_ACTIVE_ACTIVE:
+            self._unplug_frontend_port(load_balancer)
+
         try:
             subnet = self.get_subnet(vip.subnet_id)
         except base.SubnetNotFound:
@@ -589,13 +662,33 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
         for amp in loadbalancer.amphorae:
             if amp.status != constants.DELETED:
                 LOG.debug("Retrieving network details for amphora %s", amp.id)
-                vrrp_port = self.get_port(amp.vrrp_port_id)
-                vrrp_subnet = self.get_subnet(
-                    vrrp_port.get_subnet_id(amp.vrrp_ip))
-                vrrp_port.network = self.get_network(vrrp_port.network_id)
+                auxiliary_port_id = (amp.frontend_port_id if
+                                     loadbalancer.topology ==
+                                     constants.TOPOLOGY_ACTIVE_ACTIVE else
+                                     amp.vrrp_port_id)
+                auxiliary_ip = (amp.frontend_ip if
+                                loadbalancer.topology ==
+                                constants.TOPOLOGY_ACTIVE_ACTIVE else
+                                amp.vrrp_ip)
+                auxiliary_port = self.get_port(auxiliary_port_id)
+                auxiliary_subnet = self.get_subnet(
+                    auxiliary_port.get_subnet_id(auxiliary_ip))
+                auxiliary_port.network = self.get_network(
+                    auxiliary_port.network_id)
                 ha_port = self.get_port(amp.ha_port_id)
                 ha_subnet = self.get_subnet(
                     ha_port.get_subnet_id(amp.ha_ip))
+
+                if loadbalancer.topology == constants.TOPOLOGY_ACTIVE_ACTIVE:
+                    vrrp_subnet = None
+                    vrrp_port = None
+                    frontend_subnet = auxiliary_subnet
+                    frontend_port = auxiliary_port
+                else:
+                    vrrp_subnet = auxiliary_subnet
+                    vrrp_port = auxiliary_port
+                    frontend_subnet = None
+                    frontend_port = None
 
                 amp_configs[amp.id] = n_data_models.AmphoraNetworkConfig(
                     amphora=amp,
@@ -603,6 +696,8 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
                     vip_port=vip_port,
                     vrrp_subnet=vrrp_subnet,
                     vrrp_port=vrrp_port,
+                    frontend_subnet=frontend_subnet,
+                    frontend_port=frontend_port,
                     ha_subnet=ha_subnet,
                     ha_port=ha_port
                 )

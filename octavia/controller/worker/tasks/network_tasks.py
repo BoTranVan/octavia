@@ -53,8 +53,12 @@ class CalculateAmphoraDelta(BaseNetworkTask):
 
         # Figure out what networks we want
         # seed with lb network(s)
-        vrrp_port = self.network_driver.get_port(amphora.vrrp_port_id)
-        desired_network_ids = {vrrp_port.network_id}.union(
+        if loadbalancer.topology == constants.TOPOLOGY_ACTIVE_ACTIVE:
+            auxiliary_port = self.network_driver.get_port(
+                amphora.frontend_port_id)
+        else:
+            auxiliary_port = self.network_driver.get_port(amphora.vrrp_port_id)
+        desired_network_ids = {auxiliary_port.network_id}.union(
             CONF.controller_worker.amp_boot_network_list)
 
         for pool in loadbalancer.pools:
@@ -317,16 +321,19 @@ class HandleNetworkDeltas(BaseNetworkTask):
 class PlugVIP(BaseNetworkTask):
     """Task to plumb a VIP."""
 
-    def execute(self, loadbalancer):
+    def execute(self, loadbalancer, subnet=None):
         """Plumb a vip to an amphora."""
 
         LOG.debug("Plumbing VIP for loadbalancer id: %s", loadbalancer.id)
 
+        if loadbalancer.topology == constants.TOPOLOGY_ACTIVE_ACTIVE:
+            subnet = loadbalancer.distributor.frontend_subnet
         amps_data = self.network_driver.plug_vip(loadbalancer,
-                                                 loadbalancer.vip)
+                                                 loadbalancer.vip,
+                                                 subnet)
         return amps_data
 
-    def revert(self, result, loadbalancer, *args, **kwargs):
+    def revert(self, result, loadbalancer, subnet=None, *args, **kwargs):
         """Handle a failure to plumb a vip."""
 
         if isinstance(result, failure.Failure):

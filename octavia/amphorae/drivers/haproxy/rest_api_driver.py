@@ -191,7 +191,10 @@ class HaproxyAmphoraLoadBalancerDriver(
             # net_info structure here so that I don't break
             # compatibility with old amphora agent versions.
 
-            port = amphorae_network_config.get(amphora.id).vrrp_port
+            port = (amphorae_network_config.get(amphora.id).frontend_port if
+                    load_balancer.topology ==
+                    consts.TOPOLOGY_ACTIVE_ACTIVE else
+                    amphorae_network_config.get(amphora.id).vrrp_port)
             LOG.debug("Post-VIP-Plugging with vrrp_ip %s vrrp_port %s",
                       amphora.vrrp_ip, port.id)
             host_routes = [{'nexthop': hr.nexthop,
@@ -200,9 +203,12 @@ class HaproxyAmphoraLoadBalancerDriver(
             net_info = {'subnet_cidr': subnet.cidr,
                         'gateway': subnet.gateway_ip,
                         'mac_address': port.mac_address,
-                        'vrrp_ip': amphora.vrrp_ip,
                         'mtu': port.network.mtu,
                         'host_routes': host_routes}
+            if load_balancer.topology == consts.TOPOLOGY_ACTIVE_ACTIVE:
+                net_info['frontend_ip'] = amphora.frontend_ip
+            else:
+                net_info['vrrp_ip'] = amphora.vrrp_ip
             try:
                 self.client.plug_vip(amphora,
                                      load_balancer.vip.ip_address,

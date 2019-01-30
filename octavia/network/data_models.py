@@ -129,12 +129,14 @@ class AmphoraNetworkConfig(data_models.BaseDataModel):
 
     def __init__(self, amphora=None, vip_subnet=None, vip_port=None,
                  vrrp_subnet=None, vrrp_port=None, ha_subnet=None,
-                 ha_port=None):
+                 ha_port=None, frontend_subnet=None, frontend_port=None):
         self.amphora = amphora
         self.vip_subnet = vip_subnet
         self.vip_port = vip_port
         self.vrrp_subnet = vrrp_subnet
         self.vrrp_port = vrrp_port
+        self.frontend_subnet = frontend_subnet
+        self.frontend_port = frontend_port
         self.ha_subnet = ha_subnet
         self.ha_port = ha_port
 

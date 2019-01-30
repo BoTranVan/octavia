@@ -37,12 +37,29 @@ SUPPORTED_FLAVOR_SCHEMA = {
             "type": "string",
             "description": "The load balancer topology. One of: "
                            "SINGLE - One amphora per load balancer. "
-                           "ACTIVE_STANDBY - Two amphora per load balancer.",
+                           "ACTIVE_STANDBY - Two amphora per load balancer. "
+                           "ACTIVE_ACTIVE - Multiple amphora per "
+                           "load balancer.",
             "enum": list(consts.SUPPORTED_LB_TOPOLOGIES)
         },
         consts.COMPUTE_FLAVOR: {
             "type": "string",
             "description": "The compute driver flavor ID."
-        }
+        },
+        consts.DISTRIBUTOR: {
+            "type": "string",
+            "description": "The distributor for active-active load balancer.",
+            "pattern": "^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$"
+        },
+        consts.MAX_AMPHORA_NUM: {
+            "type": "integer",
+            "description": "The max number of amphora for active-active "
+                           "topology load balancer."
+        },
+        consts.MIN_AMPHORA_NUM: {
+            "type": "integer",
+            "description": "The min number of amphora for active-active "
+                           "topology load balancer."
+        },
     }
 }

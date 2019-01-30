@@ -14,13 +14,17 @@
 #
 #}
 {% macro peers_macro(constants,listener) %}
-    {% if listener.topology == constants.TOPOLOGY_ACTIVE_STANDBY %}
+    {% if listener.topology != constants.TOPOLOGY_SINGLE %}
 peers {{ "%s_peers"|format(listener.id.replace("-", ""))|trim() }}
         {% for amp in listener.amphorae if (
-            amp.status == constants.AMPHORA_ALLOCATED) %}
+                amp.status == constants.AMPHORA_ALLOCATED) %}
+            {% set auxiliary_ip = amp.vrrp_ip %}
+            {% if listener.topology == constants.TOPOLOGY_ACTIVE_ACTIVE %}
+                {% set auxiliary_ip = amp.frontend_ip %}
+            {% endif %}
             {# HAProxy has peer name limitations, thus the hash filter #}
     peer {{ amp.id|hash_amp_id|replace('=', '') }} {{
-    amp.vrrp_ip }}:{{ listener.peer_port }}
+    auxiliary_ip }}:{{ listener.peer_port }}
         {% endfor %}
     {% endif %}
 {% endmacro %}
@@ -223,7 +227,7 @@ backend {{ pool.id }}
     {% if pool.session_persistence %}
         {% if (pool.session_persistence.type ==
                constants.SESSION_PERSISTENCE_SOURCE_IP) %}
-            {% if listener.topology == constants.TOPOLOGY_ACTIVE_STANDBY %}
+            {% if listener.topology != constants.TOPOLOGY_SINGLE %}
     stick-table type ip size {{ pool.stick_size }} peers {{
     "%s_peers"|format(listener.id.replace("-", ""))|trim() }}
             {% else %}
@@ -232,7 +236,7 @@ backend {{ pool.id }}
     stick on src
         {% elif (pool.session_persistence.type ==
                  constants.SESSION_PERSISTENCE_APP_COOKIE) %}
-            {% if listener.topology == constants.TOPOLOGY_ACTIVE_STANDBY %}
+            {% if listener.topology != constants.TOPOLOGY_SINGLE %}
     stick-table type string len 64 size {{
         pool.stick_size }} peers {{
         "%s_peers"|format(listener.id.replace("-", ""))|trim() }}

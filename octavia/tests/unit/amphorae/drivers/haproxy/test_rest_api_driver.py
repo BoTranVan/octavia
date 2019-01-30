@@ -303,6 +303,27 @@ class TestHaproxyAmphoraLoadBalancerDriverTest(base.TestCase):
         self.driver.client.plug_vip.assert_called_once_with(
             self.amp, self.lb.vip.ip_address, self.subnet_info)
 
+    def test_post_vip_plug_active_active(self):
+        test_lb = sample_configs.sample_loadbalancer_tuple(
+            topology=constants.TOPOLOGY_ACTIVE_ACTIVE)
+        test_amp = sample_configs.sample_amphora_tuple(
+            frontend_ip="10.10.10.6")
+        test_subnet_info = {'frontend_ip': '10.10.10.6', 'mac_address': '123',
+                            'host_routes': [{'nexthop': '192.0.2.1',
+                                             'destination': '198.51.100.0/24'},
+                                            {'nexthop': '192.0.2.1',
+                                             'destination': '203.0.113.0/24'}],
+                            'gateway': '192.51.100.1',
+                            'subnet_cidr': '198.51.100.0/24', 'mtu': 1450}
+        amphorae_network_config = mock.MagicMock()
+        amphorae_network_config.get().vip_subnet.cidr = FAKE_CIDR
+        amphorae_network_config.get().vip_subnet.gateway_ip = FAKE_GATEWAY
+        amphorae_network_config.get().vip_subnet.host_routes = self.host_routes
+        amphorae_network_config.get().frontend_port = self.port
+        self.driver.post_vip_plug(test_amp, test_lb, amphorae_network_config)
+        self.driver.client.plug_vip.assert_called_once_with(
+            test_amp, test_lb.vip.ip_address, test_subnet_info)
+
     def test_post_network_plug(self):
         # Test dhcp path
         port = network_models.Port(mac_address=FAKE_MAC_ADDRESS,

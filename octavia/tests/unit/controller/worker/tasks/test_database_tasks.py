@@ -47,6 +47,8 @@ DISTRIBUTOR_ID = uuidutils.generate_uuid()
 VIP_IP = '192.0.5.2'
 VRRP_IP = '192.0.5.3'
 HA_IP = '192.0.5.4'
+FRONTEND_IP = '10.10.0.2'
+FRONTEND_PORT_ID = uuidutils.generate_uuid()
 AMP_ROLE = 'FAKE_ROLE'
 VRRP_ID = random.randrange(255)
 VRRP_PRIORITY = random.randrange(100)
@@ -65,6 +67,8 @@ _amphora_mock.vrrp_port_id = VRRP_PORT_ID
 _amphora_mock.role = AMP_ROLE
 _amphora_mock.vrrp_id = VRRP_ID
 _amphora_mock.vrrp_priority = VRRP_PRIORITY
+_amphora_mock.frontend_ip = FRONTEND_IP
+_amphora_mock.frontend_port_id = FRONTEND_PORT_ID
 _amphorae = [_amphora_mock]
 _loadbalancer_mock = mock.MagicMock()
 _loadbalancer_mock.id = LB_ID
@@ -495,6 +499,8 @@ class TestDatabaseTasks(base.TestCase):
         mock_amphora_repo_update.assert_called_once_with(
             'TEST',
             AMP_ID,
+            frontend_ip=FRONTEND_IP,
+            frontend_port_id=FRONTEND_PORT_ID,
             vrrp_ip=VRRP_IP,
             ha_ip=HA_IP,
             vrrp_port_id=VRRP_PORT_ID,
