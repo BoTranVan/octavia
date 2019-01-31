@@ -81,7 +81,9 @@ class AgentJinjaTestCase(base.TestCase):
                            '/etc/network/interfaces.d/\n'
                            'agent_request_read_timeout = 120\n'
                            'amphora_id = ' + AMP_ID + '\n'
-                           'amphora_udp_driver = keepalived_lvs')
+                           'amphora_udp_driver = keepalived_lvs\n\n'
+                           '[controller_worker]\n'
+                           'loadbalancer_topology = SINGLE')
         agent_cfg = ajc.build_agent_config(AMP_ID)
         self.assertEqual(expected_config, agent_cfg)
 
@@ -117,7 +119,9 @@ class AgentJinjaTestCase(base.TestCase):
                            '/etc/network/interfaces\n'
                            'agent_request_read_timeout = 120\n'
                            'amphora_id = ' + AMP_ID + '\n'
-                           'amphora_udp_driver = keepalived_lvs')
+                           'amphora_udp_driver = keepalived_lvs\n\n'
+                           '[controller_worker]\n'
+                           'loadbalancer_topology = SINGLE')
         agent_cfg = ajc.build_agent_config(AMP_ID)
         self.assertEqual(expected_config, agent_cfg)
 
@@ -152,6 +156,8 @@ class AgentJinjaTestCase(base.TestCase):
                            '/etc/network/interfaces.d/\n'
                            'agent_request_read_timeout = 120\n'
                            'amphora_id = ' + AMP_ID + '\n'
-                           'amphora_udp_driver = new_udp_driver')
+                           'amphora_udp_driver = new_udp_driver\n\n'
+                           '[controller_worker]\n'
+                           'loadbalancer_topology = SINGLE')
         agent_cfg = ajc.build_agent_config(AMP_ID)
         self.assertEqual(expected_config, agent_cfg)
