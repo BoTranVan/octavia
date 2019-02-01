@@ -4802,14 +4802,14 @@ class TestClusterQuotasRepository(BaseRepositoryTest):
                              max_l7policies_per_listener=20,
                              max_l7rules_per_l7policy=20):
         clusterquota = {
-                 'cluster_total_loadbalancers': cluster_total_loadbalancers,
-                 'max_healthmonitors_per_pool': max_healthmonitors_per_pool,
-                 'max_listeners_per_loadbalancer':
-                 max_listeners_per_loadbalancer,
-                 'max_members_per_pool': max_members_per_pool,
-                 'max_pools_per_loadbalancer': max_pools_per_loadbalancer,
-                 'max_l7policies_per_listener': max_l7policies_per_listener,
-                 'max_l7rules_per_l7policy': max_l7rules_per_l7policy}
+            'cluster_total_loadbalancers': cluster_total_loadbalancers,
+            'max_healthmonitors_per_pool': max_healthmonitors_per_pool,
+            'max_listeners_per_loadbalancer':
+            max_listeners_per_loadbalancer,
+            'max_members_per_pool': max_members_per_pool,
+            'max_pools_per_loadbalancer': max_pools_per_loadbalancer,
+            'max_l7policies_per_listener': max_l7policies_per_listener,
+            'max_l7rules_per_l7policy': max_l7rules_per_l7policy}
         clusterquotas = self.clusterquota_repo.update(self.session,
                                                       clusterquota=clusterquota
                                                       )

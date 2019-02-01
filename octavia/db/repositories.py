@@ -339,8 +339,8 @@ class Repositories(object):
                 lb_quota = clusterquotas.cluster_total_loadbalancers
             # Get the current in use count
             lb_count = session.query(models.LoadBalancer).filter(
-                    models.LoadBalancer.provisioning_status !=
-                    consts.DELETED).count() + count
+                models.LoadBalancer.provisioning_status !=
+                consts.DELETED).count() + count
             # Decide if the cluster quota is met
             if lb_count <= lb_quota or lb_quota == consts.QUOTA_UNLIMITED:
                 return False
@@ -356,9 +356,9 @@ class Repositories(object):
                                   max_listeners_per_loadbalancer)
             # Get the current in use count
             listener_count = session.query(models.Listener).filter(
-                    models.Listener.load_balancer_id == base_res_id,
-                    models.Listener.provisioning_status !=
-                    consts.DELETED).count() + count
+                models.Listener.load_balancer_id == base_res_id,
+                models.Listener.provisioning_status !=
+                consts.DELETED).count() + count
             # Decide if the quota is met
             if (listener_count <= listener_quota or
                     listener_quota == consts.QUOTA_UNLIMITED):
