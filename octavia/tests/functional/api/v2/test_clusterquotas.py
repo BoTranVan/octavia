@@ -256,8 +256,8 @@ class TestClusterQuotas(base.BaseAPITest):
         self.conf.config(group='api_settings', auth_strategy=constants.TESTING)
         with mock.patch.object(octavia.common.context.Context, 'project_id',
                                uuidutils.generate_uuid()):
-            response = self.get(self.CLUSTERQUOTA_DEFAULT_PATH.format(
-                project_id=self.project_id), status=403)
+            response = self.get(self.CLUSTERQUOTAS_DEFAULT_PATH,
+                                status=403)
         self.assertEqual(self.NOT_AUTHORIZED_BODY, response.json)
         self.conf.config(group='api_settings', auth_strategy=auth_strategy)
 

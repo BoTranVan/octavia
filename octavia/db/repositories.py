@@ -406,7 +406,7 @@ class Repositories(object):
             # Get the current in use count
             hm_count = session.query(models.HealthMonitor).filter(
                 models.HealthMonitor.pool_id == base_res_id,
-                models.health_monitor.provisioning_status !=
+                models.HealthMonitor.provisioning_status !=
                 consts.DELETED).count() + count
             # Decide if the quota is met
             if (hm_count <= hm_quota or
