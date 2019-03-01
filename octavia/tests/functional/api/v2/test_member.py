@@ -893,6 +893,11 @@ class TestMember(base.BaseAPITest):
         self.assertIn('Value should be lower or equal to',
                       resp.json.get('faultstring'))
 
+    def test_create_over_clusterquota(self):
+        self.start_clusterquota_mock(data_models.Member)
+        member = {'address': '192.0.2.3', 'protocol_port': 81}
+        self.post(self.members_path, self._build_body(member), status=403)
+
     def test_create_over_quota(self):
         self.start_quota_mock(data_models.Member)
         member = {'address': '192.0.2.3', 'protocol_port': 81}

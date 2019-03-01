@@ -220,7 +220,7 @@ class PoolsController(base.BaseController):
         lock_session = db_api.get_session(autocommit=False)
         try:
             if self.repositories.check_clusterquota_met(
-                    context.session,
+                    lock_session,
                     data_models.Pool,
                     base_res_id=pool.loadbalancer_id):
                 raise exceptions.ClusterQuotaException(
@@ -280,7 +280,7 @@ class PoolsController(base.BaseController):
 
         # Check cluster quotas for healthmonitors
         if hm and self.repositories.check_clusterquota_met(
-                session, data_models.HealthMonitor,
+                lock_session, data_models.HealthMonitor,
                 base_res_id=db_pool.id):
             raise exceptions.ClusterQuotaException(
                 resource=data_models.HealthMonitor._name())
@@ -303,7 +303,7 @@ class PoolsController(base.BaseController):
 
         # Now check cluster quotas for members
         if members and self.repositories.check_clusterquota_met(
-                session, data_models.Member,
+                lock_session, data_models.Member,
                 base_res_id=db_pool.id, count=len(members)):
             raise exceptions.ClusterQuotaException(
                 resource=data_models.Member._name())

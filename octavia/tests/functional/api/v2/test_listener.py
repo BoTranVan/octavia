@@ -802,6 +802,15 @@ class TestListener(base.BaseAPITest):
                                       constants.PENDING_UPDATE)
         self.assert_final_listener_statuses(self.lb_id, listener_api['id'])
 
+    def test_create_over_clusterquota(self):
+        self.start_clusterquota_mock(data_models.Listener)
+        lb_listener = {'name': 'listener1',
+                       'protocol': constants.PROTOCOL_HTTP,
+                       'protocol_port': 80,
+                       'loadbalancer_id': self.lb_id}
+        body = self._build_body(lb_listener)
+        self.post(self.LISTENERS_PATH, body, status=403)
+
     def test_create_over_quota(self):
         self.start_quota_mock(data_models.Listener)
         lb_listener = {'name': 'listener1',

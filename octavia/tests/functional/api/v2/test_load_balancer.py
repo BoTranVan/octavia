@@ -1484,6 +1484,14 @@ class TestLoadBalancer(base.BaseAPITest):
         self.conf.config(group='api_settings', auth_strategy=auth_strategy)
         self.assertEqual(self.NOT_AUTHORIZED_BODY, api_lb)
 
+    def test_create_over_clusterquota(self):
+        self.start_clusterquota_mock(data_models.LoadBalancer)
+        lb_json = {'name': 'test1',
+                   'vip_subnet_id': uuidutils.generate_uuid(),
+                   'project_id': self.project_id}
+        body = self._build_body(lb_json)
+        self.post(self.LBS_PATH, body, status=403)
+
     def test_create_over_quota(self):
         self.start_quota_mock(data_models.LoadBalancer)
         lb_json = {'name': 'test1',
@@ -2844,6 +2852,41 @@ class TestLoadBalancerGraph(base.BaseAPITest):
         self.assertIn("missing required attribute: protocol",
                       response.json.get('faultstring'))
 
+    def test_create_over_clusterquota_lb(self):
+        body, _ = self._test_with_one_of_everything_helper()
+        self.start_clusterquota_mock(data_models.LoadBalancer)
+        self.post(self.LBS_PATH, body, status=403)
+
+    def test_create_over_clusterquota_pools(self):
+        body, _ = self._test_with_one_of_everything_helper()
+        self.start_clusterquota_mock(data_models.Pool)
+        self.post(self.LBS_PATH, body, status=403)
+
+    def test_create_over_clusterquota_listeners(self):
+        body, _ = self._test_with_one_of_everything_helper()
+        self.start_clusterquota_mock(data_models.Listener)
+        self.post(self.LBS_PATH, body, status=403)
+
+    def test_create_over_clusterquota_members(self):
+        body, _ = self._test_with_one_of_everything_helper()
+        self.start_clusterquota_mock(data_models.Member)
+        self.post(self.LBS_PATH, body, status=403)
+
+    def test_create_over_clusterquota_hms(self):
+        body, _ = self._test_with_one_of_everything_helper()
+        self.start_clusterquota_mock(data_models.HealthMonitor)
+        self.post(self.LBS_PATH, body, status=403)
+
+    def test_create_over_clusterquota_l7policies(self):
+        body, _ = self._test_with_one_of_everything_helper()
+        self.start_clusterquota_mock(data_models.L7Policy)
+        self.post(self.LBS_PATH, body, status=403)
+
+    def test_create_over_clusterquota_l7rules(self):
+        body, _ = self._test_with_one_of_everything_helper()
+        self.start_clusterquota_mock(data_models.L7Rule)
+        self.post(self.LBS_PATH, body, status=403)
+
     def test_create_over_quota_lb(self):
         body, _ = self._test_with_one_of_everything_helper()
         self.start_quota_mock(data_models.LoadBalancer)
@@ -2869,18 +2912,15 @@ class TestLoadBalancerGraph(base.BaseAPITest):
         self.start_quota_mock(data_models.HealthMonitor)
         self.post(self.LBS_PATH, body, status=403)
 
-    # TODO(johnsom) Fix this when there is a noop certificate manager
-    @mock.patch('octavia.common.tls_utils.cert_parser.load_certificates_data')
-    def test_create_over_quota_sanity_check(self, mock_cert_data):
-        cert1 = data_models.TLSContainer(certificate='cert 1')
-        cert2 = data_models.TLSContainer(certificate='cert 2')
-        cert3 = data_models.TLSContainer(certificate='cert 3')
-        mock_cert_data.return_value = {'tls_cert': cert1,
-                                       'sni_certs': [cert2, cert3]}
-        # This one should create, as we don't check quotas on L7Policies
+    def test_create_over_quota_l7policies(self):
         body, _ = self._test_with_one_of_everything_helper()
         self.start_quota_mock(data_models.L7Policy)
-        self.post(self.LBS_PATH, body)
+        self.post(self.LBS_PATH, body, status=403)
+
+    def test_create_over_quota_l7rules(self):
+        body, _ = self._test_with_one_of_everything_helper()
+        self.start_quota_mock(data_models.L7Rule)
+        self.post(self.LBS_PATH, body, status=403)
 
     def _getStatus(self, lb_id):
         res = self.get(self.LB_PATH.format(lb_id=lb_id + "/status"))

@@ -748,6 +748,13 @@ class TestL7Policy(base.BaseAPITest):
         self.assertIn('Provider \'bad_driver\' reports error: broken',
                       response.json.get('faultstring'))
 
+    def test_create_over_clusterquota(self):
+        self.start_clusterquota_mock(data_models.L7Policy)
+        l7policy = {'listener_id': self.listener_id,
+                    'action': constants.L7POLICY_ACTION_REDIRECT_TO_URL,
+                    'redirect_url': 'http://a.com'}
+        self.post(self.L7POLICIES_PATH, self._build_body(l7policy), status=403)
+
     def test_create_over_quota(self):
         self.start_quota_mock(data_models.L7Policy)
         l7policy = {'listener_id': self.listener_id,

@@ -155,7 +155,7 @@ class MemberController(base.BaseController):
         lock_session = db_api.get_session(autocommit=False)
         try:
             if self.repositories.check_clusterquota_met(
-                    context.session,
+                    lock_session,
                     data_models.Member,
                     base_res_id=self.pool_id):
                 raise exceptions.ClusterQuotaException(
@@ -329,7 +329,7 @@ class MembersController(MemberController):
             member_count_diff = len(members) - len(old_members)
             if (member_count_diff > 0 and
                 self.repositories.check_clusterquota_met(
-                    context.session, data_models.Member,
+                    lock_session, data_models.Member,
                     base_res_id=self.pool_id, count=member_count_diff)):
                 raise exceptions.ClusterQuotaException(
                     resource=data_models.Member._name())

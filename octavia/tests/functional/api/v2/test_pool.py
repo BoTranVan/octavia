@@ -985,6 +985,15 @@ class TestPool(base.BaseAPITest):
         self.assertIn('Provider \'bad_driver\' reports error: broken',
                       response.json.get('faultstring'))
 
+    def test_create_over_clusterquota(self):
+        self.start_clusterquota_mock(data_models.Pool)
+        lb_pool = {
+            'loadbalancer_id': self.lb_id,
+            'protocol': constants.PROTOCOL_HTTP,
+            'lb_algorithm': constants.LB_ALGORITHM_ROUND_ROBIN,
+            'project_id': self.project_id}
+        self.post(self.POOLS_PATH, self._build_body(lb_pool), status=403)
+
     def test_create_over_quota(self):
         self.start_quota_mock(data_models.Pool)
         lb_pool = {

@@ -683,6 +683,15 @@ class TestL7Rule(base.BaseAPITest):
         self.assertIn('Provider \'bad_driver\' reports error: broken',
                       response.json.get('faultstring'))
 
+    def test_create_over_clusterquota(self):
+        self.start_clusterquota_mock(data_models.L7Rule)
+        l7rule = {'compare_type': 'REGEX',
+                  'invert': False,
+                  'type': 'PATH',
+                  'value': '/images*',
+                  'admin_state_up': True}
+        self.post(self.l7rules_path, self._build_body(l7rule), status=403)
+
     def test_create_over_quota(self):
         self.start_quota_mock(data_models.L7Rule)
         l7rule = {'compare_type': 'REGEX',

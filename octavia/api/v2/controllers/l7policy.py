@@ -149,7 +149,7 @@ class L7PolicyController(base.BaseController):
         lock_session = db_api.get_session(autocommit=False)
         try:
             if self.repositories.check_clusterquota_met(
-                    context.session,
+                    lock_session,
                     data_models.L7Policy,
                     base_res_id=listener_id):
                 raise exceptions.ClusterQuotaException(
@@ -192,13 +192,27 @@ class L7PolicyController(base.BaseController):
                                           l7policy_types.L7PolicyResponse)
         return l7policy_types.L7PolicyRootResponse(l7policy=result)
 
-    def _graph_create(self, lock_session, policy_dict):
+    def _graph_create(self, session, lock_session, policy_dict):
         load_balancer_id = policy_dict.pop('load_balancer_id', None)
         listener_id = policy_dict['listener_id']
         policy_dict = db_prepare.create_l7policy(
             policy_dict, load_balancer_id, listener_id)
         rules = policy_dict.pop('l7rules', []) or []
         db_policy = self._validate_create_l7policy(lock_session, policy_dict)
+
+        # Check cluster quotas for l7rules.
+        if rules and self.repositories.check_clusterquota_met(
+                lock_session, data_models.L7Rule, base_res_id=db_policy.id,
+                count=len(rules)):
+            raise exceptions.ClusterQuotaException(
+                resource=data_models.L7Rule._name())
+
+        # Check quotas for l7policies.
+        if rules and self.repositories.check_quota_met(
+                session, lock_session, data_models.L7Rule,
+                db_policy.project_id, count=len(rules)):
+            raise exceptions.ClusterQuotaException(
+                resource=data_models.L7Rule._name())
 
         new_rules = []
         for r in rules:

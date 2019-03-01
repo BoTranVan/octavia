@@ -222,7 +222,7 @@ class ListenersController(base.BaseController):
         lock_session = db_api.get_session(autocommit=False)
         try:
             if self.repositories.check_clusterquota_met(
-                    context.session,
+                    lock_session,
                     data_models.Listener,
                     base_res_id=load_balancer_id):
                 raise exceptions.ClusterQuotaException(
@@ -273,7 +273,7 @@ class ListenersController(base.BaseController):
                                           listener_types.ListenerResponse)
         return listener_types.ListenerRootResponse(listener=result)
 
-    def _graph_create(self, lock_session, listener_dict,
+    def _graph_create(self, session, lock_session, listener_dict,
                       l7policies=None, pool_name_ids=None):
         load_balancer_id = listener_dict['load_balancer_id']
         listener_dict = db_prepare.create_listener(
@@ -285,6 +285,20 @@ class ListenersController(base.BaseController):
                                 listener_dict['protocol'])
         db_listener = self._validate_create_listener(
             lock_session, listener_dict)
+
+        # Check cluster quotas for l7policies.
+        if l7policies and self.repositories.check_clusterquota_met(
+                lock_session, data_models.L7Policy,
+                base_res_id=db_listener.id, count=len(l7policies)):
+            raise exceptions.ClusterQuotaException(
+                resource=data_models.L7Policy._name())
+
+        # Check quotas for l7policies.
+        if l7policies and self.repositories.check_quota_met(
+                session, lock_session, data_models.L7Policy,
+                db_listener.project_id, count=len(l7policies)):
+            raise exceptions.ClusterQuotaException(
+                resource=data_models.L7Policy._name())
 
         # Now create l7policies
         new_l7ps = []
@@ -301,7 +315,7 @@ class ListenersController(base.BaseController):
                         type='Pool', name=pool_name)
                 l7p['redirect_pool_id'] = pool_id
             new_l7ps.append(l7policy.L7PolicyController()._graph_create(
-                lock_session, l7p))
+                session, lock_session, l7p))
         db_listener.l7policies = new_l7ps
         return db_listener
 

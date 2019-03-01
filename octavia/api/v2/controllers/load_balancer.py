@@ -331,7 +331,7 @@ class LoadBalancersController(base.BaseController):
         lock_session = db_api.get_session(autocommit=False)
         try:
             if self.repositories.check_clusterquota_met(
-                    context.session,
+                    lock_session,
                     data_models.LoadBalancer):
                 raise exceptions.ClusterQuotaException(
                     resource=data_models.LoadBalancer._name())
@@ -479,7 +479,7 @@ class LoadBalancersController(base.BaseController):
 
         # Check cluster quotas for pools.
         if pools and self.repositories.check_clusterquota_met(
-                session, data_models.Pool, base_res_id=db_lb.id,
+                lock_session, data_models.Pool, base_res_id=db_lb.id,
                 count=len(pools)):
             raise exceptions.ClusterQuotaException(
                 resource=data_models.Pool._name())
@@ -511,7 +511,8 @@ class LoadBalancersController(base.BaseController):
 
         # Now check cluster quotas for listeners
         if listeners and self.repositories.check_clusterquota_met(
-                session, data_models.Listener, base_res_id=db_lb.id,
+                lock_session, data_models.Listener,
+                base_res_id=db_lb.id,
                 count=len(listeners)):
             raise exceptions.ClusterQuotaException(
                 resource=data_models.Listener._name())
@@ -538,7 +539,7 @@ class LoadBalancersController(base.BaseController):
             l['load_balancer_id'] = db_lb.id
             l['project_id'] = db_lb.project_id
             new_lists.append(listener.ListenersController()._graph_create(
-                lock_session, l, pool_name_ids=pool_name_ids))
+                session, lock_session, l, pool_name_ids=pool_name_ids))
 
         return new_pools, new_lists
 

@@ -997,6 +997,586 @@ class AllRepositoriesTest(base.OctaviaDBTestBase):
         self.assertIsNone(self.repos.load_balancer.get(self.session,
                                                        name='lb2'))
 
+    def test_check_clusterquota_met(self):
+        conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
+        conf.config(group='api_settings', auth_strategy=constants.TESTING)
+
+        # Test non-clusterquota object
+        base_res_id = uuidutils.generate_uuid()
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.SessionPersistence,
+            base_res_id=base_res_id))
+        # Test DB deadlock case
+        mock_session = mock.MagicMock()
+        mock_session.query = mock.MagicMock(
+            side_effect=db_exception.DBDeadlock)
+        self.assertRaises(exceptions.ClusterQuotaBusyException,
+                          self.repos.check_clusterquota_met,
+                          mock_session,
+                          models.LoadBalancer)
+
+        # ### Test load balancer clusterquota
+        origin_lb_count = self.session.query(db_models.LoadBalancer).filter(
+            db_models.LoadBalancer.provisioning_status !=
+            constants.DELETED).count()
+        # Test with no pre-existing clusterquota record default origin_lb_count
+        conf.config(group='clusterquotas',
+                    cluster_total_loadbalancers=origin_lb_count)
+        self.assertTrue(self.repos.check_clusterquota_met(self.session,
+                                                          models.LoadBalancer))
+
+        # Test with no pre-existing clusterquota record
+        # default origin_lb_count+1
+        conf.config(group='clusterquotas',
+                    cluster_total_loadbalancers=origin_lb_count+1)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.LoadBalancer))
+
+        # Test with no pre-existing clusterquota record default unlimited
+        conf.config(group='clusterquotas',
+                    cluster_total_loadbalancers=constants.QUOTA_UNLIMITED)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.LoadBalancer))
+
+        # Test upgrade case with pre-clusterquota load balancers
+        project_id = uuidutils.generate_uuid()
+        conf.config(group='clusterquotas',
+                    cluster_total_loadbalancers=origin_lb_count+1)
+        lb = self.repos.load_balancer.create(
+            self.session, id=uuidutils.generate_uuid(),
+            project_id=project_id, name="lb_name",
+            description="lb_description",
+            provisioning_status=constants.ACTIVE,
+            operating_status=constants.ONLINE,
+            enabled=True)
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.LoadBalancer))
+
+        # Test upgrade case with pre-clusterquota deleted load balancers
+        conf.config(group='clusterquotas',
+                    cluster_total_loadbalancers=origin_lb_count+2)
+        self.repos.load_balancer.create(
+            self.session, id=uuidutils.generate_uuid(),
+            project_id=project_id, name="lb_name",
+            description="lb_description",
+            provisioning_status=constants.DELETED,
+            operating_status=constants.ONLINE,
+            enabled=True)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.LoadBalancer))
+
+        # Test pre-existing clusterquota with clusterquota of origin_lb_count+1
+        conf.config(group='clusterquotas',
+                    cluster_total_loadbalancers=origin_lb_count+10)
+        clusterquota = {'cluster_total_loadbalancers': origin_lb_count+1}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.LoadBalancer))
+
+        # Test pre-existing clusterquota with clusterquota of origin_lb_count+2
+        conf.config(group='clusterquotas',
+                    cluster_total_loadbalancers=origin_lb_count+10)
+        clusterquota = {'cluster_total_loadbalancers': origin_lb_count+2}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.LoadBalancer))
+
+        # Test pre-existing clusterquota with clusterquota of unlimited
+        conf.config(group='clusterquotas',
+                    cluster_total_loadbalancers=origin_lb_count+10)
+        clusterquota = {'cluster_total_loadbalancers':
+                        constants.QUOTA_UNLIMITED}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.LoadBalancer))
+
+        # ### Test listener clusterquota
+        base_res_id = lb.id
+        # Test with no pre-existing clusterquota record default 0
+        conf.config(group='clusterquotas', max_listeners_per_loadbalancer=0)
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.Listener,
+            base_res_id=base_res_id))
+
+        # Test with no pre-existing clusterquota record default 1
+        conf.config(group='clusterquotas', max_listeners_per_loadbalancer=1)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.Listener,
+            base_res_id=base_res_id))
+
+        # Test with no pre-existing clusterquota record default unlimited
+        conf.config(group='clusterquotas',
+                    max_listeners_per_loadbalancer=constants.QUOTA_UNLIMITED)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.Listener,
+            base_res_id=base_res_id))
+
+        # Test upgrade case with pre-clusterquota listener
+        conf.config(group='clusterquotas', max_listeners_per_loadbalancer=1)
+        listener = self.repos.listener.create(
+            self.session, protocol=constants.PROTOCOL_HTTP, protocol_port=80,
+            enabled=True, provisioning_status=constants.ACTIVE,
+            operating_status=constants.ONLINE, project_id=project_id,
+            load_balancer_id=lb.id)
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.Listener,
+            base_res_id=base_res_id))
+
+        # Test upgrade case with pre-clusterquota deleted listener
+        conf.config(group='clusterquotas', max_listeners_per_loadbalancer=2)
+        self.repos.listener.create(
+            self.session, protocol=constants.PROTOCOL_HTTP, protocol_port=81,
+            enabled=True, provisioning_status=constants.DELETED,
+            operating_status=constants.ONLINE, project_id=project_id,
+            load_balancer_id=lb.id)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.Listener,
+            base_res_id=base_res_id))
+
+        # Test pre-existing clusterquota with clusterquota of one
+        conf.config(group='clusterquotas', max_listeners_per_loadbalancer=10)
+        clusterquota = {'max_listeners_per_loadbalancer': 1}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.Listener,
+            base_res_id=base_res_id))
+
+        # Test pre-existing clusterquota with clusterquota of two
+        conf.config(group='clusterquotas', max_listeners_per_loadbalancer=0)
+        clusterquota = {'max_listeners_per_loadbalancer': 2}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.Listener,
+            base_res_id=base_res_id))
+
+        # Test pre-existing clusterquota with clusterquota of unlimited
+        conf.config(group='clusterquotas', max_listeners_per_loadbalancer=0)
+        clusterquota = {'max_listeners_per_loadbalancer':
+                        constants.QUOTA_UNLIMITED}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.Listener,
+            base_res_id=base_res_id))
+
+        # ### Test pool clusterquota
+        base_res_id = lb.id
+        # Test with no pre-existing clusterquota record default 0
+        conf.config(group='clusterquotas', max_pools_per_loadbalancer=0)
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.Pool,
+            base_res_id=base_res_id))
+
+        # Test with no pre-existing clusterquota record default 1
+        conf.config(group='clusterquotas', max_pools_per_loadbalancer=1)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.Pool,
+            base_res_id=base_res_id))
+
+        # Test with no pre-existing clusterquota record default unlimited
+        conf.config(group='clusterquotas',
+                    max_pools_per_loadbalancer=constants.QUOTA_UNLIMITED)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.Pool,
+            base_res_id=base_res_id))
+
+        # Test upgrade case with pre-clusterquota pool
+        conf.config(group='clusterquotas', max_pools_per_loadbalancer=1)
+        pool = self.repos.pool.create(
+            self.session, id=uuidutils.generate_uuid(),
+            project_id=project_id, name="pool1",
+            protocol=constants.PROTOCOL_HTTP,
+            lb_algorithm=constants.LB_ALGORITHM_ROUND_ROBIN,
+            provisioning_status=constants.ACTIVE,
+            operating_status=constants.ONLINE,
+            enabled=True, load_balancer_id=lb.id)
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.Pool,
+            base_res_id=base_res_id))
+
+        # Test upgrade case with pre-clusterquota deleted pool
+        conf.config(group='clusterquotas', max_pools_per_loadbalancer=2)
+        self.repos.pool.create(
+            self.session, id=uuidutils.generate_uuid(),
+            project_id=project_id, name="pool2",
+            protocol=constants.PROTOCOL_HTTP,
+            lb_algorithm=constants.LB_ALGORITHM_ROUND_ROBIN,
+            provisioning_status=constants.DELETED,
+            operating_status=constants.ONLINE,
+            enabled=True, load_balancer_id=lb.id)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.Pool,
+            base_res_id=base_res_id))
+
+        # Test pre-existing clusterquota with clusterquota of one
+        conf.config(group='clusterquotas', max_pools_per_loadbalancer=10)
+        clusterquota = {'max_pools_per_loadbalancer': 1}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.Pool,
+            base_res_id=base_res_id))
+
+        # Test pre-existing clusterquota with clusterquota of two
+        conf.config(group='clusterquotas', max_pools_per_loadbalancer=0)
+        clusterquota = {'max_pools_per_loadbalancer': 2}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.Pool,
+            base_res_id=base_res_id))
+
+        # Test pre-existing clusterquota with clusterquota of unlimited
+        conf.config(group='clusterquotas', max_pools_per_loadbalancer=0)
+        clusterquota = {'max_pools_per_loadbalancer':
+                        constants.QUOTA_UNLIMITED}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.Pool,
+            base_res_id=base_res_id))
+
+        # ### Test health monitor clusterquota
+        base_res_id = pool.id
+        # Test with no pre-existing clusterquota record default 0
+        conf.config(group='clusterquotas', max_healthmonitors_per_pool=0)
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.HealthMonitor,
+            base_res_id=base_res_id))
+
+        # Test with no pre-existing clusterquota record default 1
+        conf.config(group='clusterquotas', max_healthmonitors_per_pool=1)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.HealthMonitor,
+            base_res_id=base_res_id))
+
+        # Test with no pre-existing clusterquota record default unlimited
+        conf.config(group='clusterquotas',
+                    max_healthmonitors_per_pool=constants.QUOTA_UNLIMITED)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.HealthMonitor,
+            base_res_id=base_res_id))
+
+        # Test upgrade case with pre-clusterquota health monitor
+        conf.config(group='clusterquotas', max_healthmonitors_per_pool=1)
+        self.repos.health_monitor.create(
+            self.session, project_id=project_id,
+            name="health_mon1", type=constants.HEALTH_MONITOR_HTTP,
+            delay=1, timeout=1, fall_threshold=1, rise_threshold=1,
+            provisioning_status=constants.ACTIVE,
+            operating_status=constants.ONLINE,
+            enabled=True, pool_id=pool.id)
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.HealthMonitor,
+            base_res_id=base_res_id))
+
+        # Test pre-existing clusterquota with clusterquota of one
+        conf.config(group='clusterquotas', max_healthmonitors_per_pool=10)
+        clusterquota = {'max_healthmonitors_per_pool': 1}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.HealthMonitor,
+            base_res_id=base_res_id))
+
+        # Test pre-existing clusterquota with clusterquota of two
+        conf.config(group='clusterquotas', max_healthmonitors_per_pool=0)
+        clusterquota = {'max_healthmonitors_per_pool': 2}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.HealthMonitor,
+            base_res_id=base_res_id))
+
+        # Test pre-existing clusterquota with clusterquota of unlimited
+        conf.config(group='clusterquotas', max_healthmonitors_per_pool=0)
+        clusterquota = {'max_healthmonitors_per_pool':
+                        constants.QUOTA_UNLIMITED}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.HealthMonitor,
+            base_res_id=base_res_id))
+
+        # ### Test member clusterquota
+        base_res_id = pool.id
+        # Test with no pre-existing clusterquota record default 0
+        conf.config(group='clusterquotas', max_members_per_pool=0)
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.Member,
+            base_res_id=base_res_id))
+
+        # Test with no pre-existing clusterquota record default 1
+        conf.config(group='clusterquotas', max_members_per_pool=1)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.Member,
+            base_res_id=base_res_id))
+
+        # Test with no pre-existing clusterquota record default unlimited
+        conf.config(group='clusterquotas',
+                    max_members_per_pool=constants.QUOTA_UNLIMITED)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.Member,
+            base_res_id=base_res_id))
+
+        # Test upgrade case with pre-clusterquota member
+        conf.config(group='clusterquotas', max_members_per_pool=1)
+        self.repos.member.create(
+            self.session, project_id=project_id,
+            ip_address='192.0.2.1', protocol_port=80,
+            provisioning_status=constants.ACTIVE,
+            operating_status=constants.ONLINE,
+            enabled=True, pool_id=pool.id, backup=False)
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.Member,
+            base_res_id=base_res_id))
+
+        # Test upgrade case with pre-clusterquota deleted member
+        conf.config(group='clusterquotas', max_members_per_pool=2)
+        self.repos.member.create(
+            self.session, project_id=project_id,
+            ip_address='192.0.2.1', protocol_port=81,
+            provisioning_status=constants.DELETED,
+            operating_status=constants.ONLINE,
+            enabled=True, pool_id=pool.id, backup=False)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.Member,
+            base_res_id=base_res_id))
+
+        # Test pre-existing clusterquota with clusterquota of one
+        conf.config(group='clusterquotas', max_members_per_pool=10)
+        clusterquota = {'max_members_per_pool': 1}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.Member,
+            base_res_id=base_res_id))
+
+        # Test pre-existing clusterquota with clusterquota of two
+        conf.config(group='clusterquotas', max_members_per_pool=0)
+        clusterquota = {'max_members_per_pool': 2}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.Member,
+            base_res_id=base_res_id))
+
+        # Test pre-existing clusterquota with clusterquota of unlimited
+        conf.config(group='clusterquotas', max_members_per_pool=0)
+        clusterquota = {'max_members_per_pool':
+                        constants.QUOTA_UNLIMITED}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.Member,
+            base_res_id=base_res_id))
+
+        # ### Test l7policy clusterquota
+        base_res_id = listener.id
+        # Test with no pre-existing clusterquota record default 0
+        conf.config(group='clusterquotas', max_l7policies_per_listener=0)
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.L7Policy,
+            base_res_id=base_res_id))
+
+        # Test with no pre-existing clusterquota record default 1
+        conf.config(group='clusterquotas', max_l7policies_per_listener=1)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.L7Policy,
+            base_res_id=base_res_id))
+
+        # Test with no pre-existing clusterquota record default unlimited
+        conf.config(group='clusterquotas',
+                    max_l7policies_per_listener=constants.QUOTA_UNLIMITED)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.L7Policy,
+            base_res_id=base_res_id))
+
+        # Test upgrade case with pre-clusterquota l7policy
+        conf.config(group='clusterquotas', max_l7policies_per_listener=1)
+        l7policy = self.repos.l7policy.create(
+            self.session, name='l7policy', enabled=True, position=1,
+            action=constants.L7POLICY_ACTION_REJECT,
+            provisioning_status=constants.ACTIVE, listener_id=listener.id,
+            operating_status=constants.ONLINE, project_id=project_id,
+            id=uuidutils.generate_uuid())
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.L7Policy,
+            base_res_id=base_res_id))
+
+        # Test upgrade case with pre-clusterquota deleted l7policy
+        conf.config(group='clusterquotas', max_l7policies_per_listener=2)
+        self.repos.l7policy.create(
+            self.session, name='l7policy', enabled=True, position=1,
+            action=constants.L7POLICY_ACTION_REJECT,
+            provisioning_status=constants.DELETED, listener_id=listener.id,
+            operating_status=constants.ONLINE, project_id=project_id,
+            id=uuidutils.generate_uuid())
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.L7Policy,
+            base_res_id=base_res_id))
+
+        # Test pre-existing clusterquota with clusterquota of one
+        conf.config(group='clusterquotas', max_l7policies_per_listener=10)
+        clusterquota = {'max_l7policies_per_listener': 1}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.L7Policy,
+            base_res_id=base_res_id))
+
+        # Test pre-existing clusterquota with clusterquota of two
+        conf.config(group='clusterquotas', max_l7policies_per_listener=0)
+        clusterquota = {'max_l7policies_per_listener': 2}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.L7Policy,
+            base_res_id=base_res_id))
+
+        # Test pre-existing clusterquota with clusterquota of unlimited
+        conf.config(group='clusterquotas', max_l7policies_per_listener=0)
+        clusterquota = {'max_l7policies_per_listener':
+                        constants.QUOTA_UNLIMITED}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.L7Policy,
+            base_res_id=base_res_id))
+
+        # ### Test l7rule clusterquota
+        base_res_id = l7policy.id
+        # Test with no pre-existing clusterquota record default 0
+        conf.config(group='clusterquotas', max_l7rules_per_l7policy=0)
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.L7Rule,
+            base_res_id=base_res_id))
+
+        # Test with no pre-existing clusterquota record default 1
+        conf.config(group='clusterquotas', max_l7rules_per_l7policy=1)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.L7Rule,
+            base_res_id=base_res_id))
+
+        # Test with no pre-existing clusterquota record default unlimited
+        conf.config(group='clusterquotas',
+                    max_l7rules_per_l7policy=constants.QUOTA_UNLIMITED)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.L7Rule,
+            base_res_id=base_res_id))
+
+        # Test upgrade case with pre-clusterquota l7rule
+        conf.config(group='clusterquotas', max_l7rules_per_l7policy=1)
+        self.repos.l7rule.create(
+            self.session, id=uuidutils.generate_uuid(),
+            l7policy_id=l7policy.id, type=constants.L7RULE_TYPE_HOST_NAME,
+            compare_type=constants.L7RULE_COMPARE_TYPE_EQUAL_TO, enabled=True,
+            provisioning_status=constants.ACTIVE, value='hostname',
+            operating_status=constants.ONLINE, project_id=project_id)
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.L7Rule,
+            base_res_id=base_res_id))
+
+        # Test upgrade case with pre-clusterquota deleted l7rule
+        conf.config(group='clusterquotas', max_l7rules_per_l7policy=2)
+        self.repos.l7rule.create(
+            self.session, id=uuidutils.generate_uuid(),
+            l7policy_id=l7policy.id, type=constants.L7RULE_TYPE_HOST_NAME,
+            compare_type=constants.L7RULE_COMPARE_TYPE_EQUAL_TO, enabled=True,
+            provisioning_status=constants.DELETED, value='hostname',
+            operating_status=constants.ONLINE, project_id=project_id)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.L7Rule,
+            base_res_id=base_res_id))
+
+        # Test pre-existing clusterquota with clusterquota of one
+        conf.config(group='clusterquotas', max_l7rules_per_l7policy=10)
+        clusterquota = {'max_l7rules_per_l7policy': 1}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertTrue(self.repos.check_clusterquota_met(
+            self.session,
+            models.L7Rule,
+            base_res_id=base_res_id))
+
+        # Test pre-existing clusterquota with clusterquota of two
+        conf.config(group='clusterquotas', max_l7rules_per_l7policy=0)
+        clusterquota = {'max_l7rules_per_l7policy': 2}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.L7Rule,
+            base_res_id=base_res_id))
+
+        # Test pre-existing clusterquota with clusterquota of unlimited
+        conf.config(group='clusterquotas', max_l7rules_per_l7policy=0)
+        clusterquota = {'max_l7rules_per_l7policy':
+                        constants.QUOTA_UNLIMITED}
+        self.repos.clusterquotas.update(self.session,
+                                        clusterquota=clusterquota)
+        self.assertFalse(self.repos.check_clusterquota_met(
+            self.session,
+            models.L7Rule,
+            base_res_id=base_res_id))
+
     def test_check_quota_met(self):
 
         project_id = uuidutils.generate_uuid()

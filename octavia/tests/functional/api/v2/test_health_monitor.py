@@ -1082,6 +1082,9 @@ class TestHealthMonitor(base.BaseAPITest):
                     'max_retries_down': 1,
                     'max_retries': 1,
                     'url_path': '/'}
+        self.assert_correct_status(
+            lb_id=self.lb_id, listener_id=self.listener_id,
+            pool_id=self.pool_id)
         self.post(self.HMS_PATH, self._build_body(req_dict), status=400)
         self.assert_correct_status(
             lb_id=self.lb_id, listener_id=self.listener_id,
@@ -1185,6 +1188,16 @@ class TestHealthMonitor(base.BaseAPITest):
         self.create_health_monitor(
             self.pool_id, constants.HEALTH_MONITOR_HTTP, 1, 1, 1, 1,
             status=409)
+
+    def test_create_over_clusterquota(self):
+        self.start_clusterquota_mock(data_models.HealthMonitor)
+        hm = {'pool_id': self.pool_id,
+              'type': constants.HEALTH_MONITOR_HTTP,
+              'delay': 1,
+              'timeout': 1,
+              'max_retries_down': 1,
+              'max_retries': 1}
+        self.post(self.HMS_PATH, self._build_body(hm), status=403)
 
     def test_create_over_quota(self):
         self.start_quota_mock(data_models.HealthMonitor)

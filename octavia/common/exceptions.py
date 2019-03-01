@@ -295,6 +295,11 @@ class ClusterQuotaException(APIException):
     code = 403
 
 
+class ClusterQuotaBusyException(APIException):
+    msg = _('ClusterQuota busy.  Unable to lock.  Please try again.')
+    code = 503
+
+
 class ProjectBusyException(APIException):
     msg = _('Project busy.  Unable to lock the project.  Please try again.')
     code = 503
