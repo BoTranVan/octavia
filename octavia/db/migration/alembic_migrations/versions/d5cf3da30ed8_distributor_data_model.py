@@ -15,7 +15,7 @@
 """distributor-data-model
 
 Revision ID: d5cf3da30ed8
-Revises: 211982b05afc
+Revises: 11e4bb2bb8ef
 Create Date: 2017-12-15 16:39:05.765206
 
 """
@@ -25,7 +25,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'd5cf3da30ed8'
-down_revision = '211982b05afc'
+down_revision = '11e4bb2bb8ef'
 
 
 def upgrade():

@@ -70,6 +70,13 @@ class NoopManager(object):
         self.driverconfig[loadbalancer_id] = (loadbalancer_id,
                                               'loadbalancer_failover')
 
+    def loadbalancer_extension(self, loadbalancer_id):
+        LOG.debug('Provider %s no-op, loadbalancer_extension loadbalancer %s',
+                  self.__class__.__name__, loadbalancer_id)
+
+        self.driverconfig[loadbalancer_id] = (loadbalancer_id,
+                                              'loadbalancer_extension')
+
     def loadbalancer_update(self, old_loadbalancer, new_loadbalancer):
         LOG.debug('Provider %s no-op, loadbalancer_update loadbalancer %s '
                   'old: %s. new: %s',
@@ -288,6 +295,9 @@ class NoopProviderDriver(driver_base.ProviderDriver):
 
     def loadbalancer_update(self, old_loadbalancer, new_loadbalancer):
         self.driver.loadbalancer_update(old_loadbalancer, new_loadbalancer)
+
+    def loadbalancer_extension(self, loadbalancer_id):
+        self.driver.loadbalancer_extension(loadbalancer_id)
 
     # Listener
     def listener_create(self, listener):

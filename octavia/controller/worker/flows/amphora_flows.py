@@ -14,6 +14,7 @@
 #
 
 from oslo_config import cfg
+from stevedore import driver as stevedore_driver
 from taskflow.patterns import graph_flow
 from taskflow.patterns import linear_flow
 from taskflow.patterns import unordered_flow
@@ -488,6 +489,109 @@ class AmphoraFlows(object):
 
         return failover_amphora_flow
 
+    def get_extension_flow(self, distributor, load_balancer=None):
+        """Extend a amphora for load balancer.
+
+        :returns: The flow for loadbalancer extension
+        """
+
+        extension_flow = linear_flow.Flow(
+            constants.EXTENSION_LOADBALANCER_FLOW)
+
+        get_amp_subflow = self.get_amphora_for_lb_subflow(
+            prefix=constants.EXTENSION_LOADBALANCER_FLOW,
+            role=constants.ROLE_ACTIVE)
+        extension_flow.add(get_amp_subflow)
+
+        # Update the data stored in the flow from the database
+        extension_flow.add(database_tasks.ReloadLoadBalancer(
+            name='first',
+            requires=constants.LOADBALANCER_ID,
+            provides=constants.LOADBALANCER))
+
+        extension_flow.add(network_tasks.PlugAmphoraVIP(
+            requires=(constants.AMPHORA, constants.LOADBALANCER),
+            provides=constants.AMPS_DATA))
+        extension_flow.add(database_tasks.UpdateAmphoraVIPData(
+            requires=constants.AMPS_DATA))
+
+        # Update the data stored in the flow from the database
+        extension_flow.add(database_tasks.ReloadLoadBalancer(
+            name='second',
+            requires=constants.LOADBALANCER_ID,
+            provides=constants.LOADBALANCER))
+
+        extension_flow.add(database_tasks.ReloadAmphora(
+            requires=constants.AMPHORA_ID,
+            provides=constants.AMPHORA))
+
+        # Prepare to reconnect the network interface(s)
+        extension_flow.add(network_tasks.GetAmphoraeNetworkConfigs(
+            requires=constants.LOADBALANCER,
+            provides=constants.AMPHORAE_NETWORK_CONFIG))
+        extension_flow.add(database_tasks.GetListenersFromLoadbalancer(
+            requires=constants.LOADBALANCER, provides=constants.LISTENERS))
+        extension_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
+            requires=constants.LOADBALANCER, provides=constants.AMPHORAE))
+        extension_flow.add(amphora_driver_tasks.AmphoraePostVIPPlug(
+            requires=(constants.LOADBALANCER,
+                      constants.AMPHORAE_NETWORK_CONFIG)))
+
+        # Listeners update needs to be run on all amphora to update
+        # their peer configurations. So parallelize this with an
+        # unordered subflow.
+        update_amps_subflow = unordered_flow.Flow(
+            constants.UPDATE_AMPS_SUBFLOW)
+
+        timeout_dict = {
+            constants.CONN_MAX_RETRIES:
+                CONF.haproxy_amphora.active_connection_max_retries,
+            constants.CONN_RETRY_INTERVAL:
+                CONF.haproxy_amphora.active_connection_rety_interval}
+
+        # Setup parallel flows for each amp. We don't know the new amp
+        # details at flow creation time, so setup a subflow for each
+        # amp on the LB, they let the task index into a list of amps
+        # to find the amphora it should work on.
+        amp_index = 0
+        for amp in load_balancer.amphorae:
+            if amp.status == constants.DELETED:
+                continue
+            update_amps_subflow.add(
+                amphora_driver_tasks.AmpListenersUpdate(
+                    name=constants.AMP_LISTENER_UPDATE + '-' + str(amp_index),
+                    requires=(constants.LISTENERS, constants.AMPHORAE),
+                    inject={constants.AMPHORA_INDEX: amp_index,
+                            constants.TIMEOUT_DICT: timeout_dict}))
+            amp_index += 1
+
+        extension_flow.add(update_amps_subflow)
+
+        # Plug the member networks into the new amphora
+        extension_flow.add(network_tasks.CalculateAmphoraDelta(
+            requires=(constants.LOADBALANCER, constants.AMPHORA),
+            provides=constants.DELTA))
+
+        extension_flow.add(network_tasks.HandleNetworkDelta(
+            requires=(constants.AMPHORA, constants.DELTA),
+            provides=constants.ADDED_PORTS))
+
+        extension_flow.add(amphora_driver_tasks.AmphoraePostNetworkPlug(
+            requires=(constants.LOADBALANCER, constants.ADDED_PORTS)))
+
+        extension_flow.add(database_tasks.ReloadLoadBalancer(
+            name='octavia-extension-LB-reload-2',
+            requires=constants.LOADBALANCER_ID,
+            provides=constants.LOADBALANCER))
+
+        extension_flow.add(self.get_distributor_flows(
+            'octavia-extension-distributor-flow', distributor))
+
+        extension_flow.add(amphora_driver_tasks.ListenersStart(
+            requires=(constants.LOADBALANCER, constants.LISTENERS,
+                      constants.AMPHORA)))
+        return extension_flow
+
     def get_vrrp_subflow(self, prefix):
         sf_name = prefix + '-' + constants.GET_VRRP_SUBFLOW
         vrrp_subflow = linear_flow.Flow(sf_name)
@@ -507,6 +611,21 @@ class AmphoraFlows(object):
             name=sf_name + '-' + constants.AMP_VRRP_START,
             requires=constants.LOADBALANCER))
         return vrrp_subflow
+
+    def get_distributor_flows(self, prefix, distributor):
+        distributor_driver = stevedore_driver.DriverManager(
+            namespace='octavia.distributor.drivers',
+            name=distributor.distributor_driver, invoke_on_load=True).driver
+        sf_name = prefix + '-' + constants.GET_BGP_SUBFLOW
+        distributor_subflow = linear_flow.Flow(sf_name)
+        distributor_subflow.add(
+            amphora_driver_tasks.AmphoraUpdateFrontendInterface(
+                name=sf_name + '-' + constants.AMP_UPDATE_FRONTEND_INTF,
+                requires=constants.LOADBALANCER,
+                provides=constants.LOADBALANCER))
+        distributor_subflow.add(
+            *distributor_driver.get_register_amphorae_subflow())
+        return distributor_subflow
 
     def cert_rotate_amphora_flow(self):
         """Implement rotation for amphora's cert.

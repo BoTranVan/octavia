@@ -56,6 +56,8 @@ class LoadBalancerResponse(BaseLoadBalancerType):
     vip_qos_policy_id = wtypes.wsattr(wtypes.UuidType())
     tags = wtypes.wsattr(wtypes.ArrayType(wtypes.StringType()))
     distributor = wtypes.wsattr(wtypes.UuidType())
+    amphora_number = wtypes.wsattr(wtypes.IntegerType())
+    expected_amphora_number = wtypes.wsattr(wtypes.IntegerType())
 
     @classmethod
     def from_data_model(cls, data_model, children=False):

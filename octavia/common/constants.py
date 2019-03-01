@@ -289,6 +289,7 @@ DELETE_POOL_FLOW = 'octavia-delete-pool-flow'
 DELETE_L7POLICY_FLOW = 'octavia-delete-l7policy-flow'
 DELETE_L7RULE_FLOW = 'octavia-delete-l7policy-flow'
 FAILOVER_AMPHORA_FLOW = 'octavia-failover-amphora-flow'
+EXTENSION_LOADBALANCER_FLOW = 'octavia-extned-loadbalancer-flow'
 LOADBALANCER_NETWORKING_SUBFLOW = 'octavia-new-loadbalancer-net-subflow'
 UPDATE_HEALTH_MONITOR_FLOW = 'octavia-update-health-monitor-flow'
 UPDATE_LISTENER_FLOW = 'octavia-update-listener-flow'
@@ -372,6 +373,7 @@ SERVICE_AUTH = 'service_auth'
 RPC_NAMESPACE_CONTROLLER_AGENT = 'controller'
 
 # Build Type Priority
+LB_CREATE_EXTENSION_PRIORITY = 10
 LB_CREATE_FAILOVER_PRIORITY = 20
 LB_CREATE_NORMAL_PRIORITY = 40
 LB_CREATE_SPARES_POOL_PRIORITY = 60
@@ -564,6 +566,7 @@ RBAC_POST = 'post'
 RBAC_PUT = 'put'
 RBAC_PUT_CONFIG = 'put_config'
 RBAC_PUT_FAILOVER = 'put_failover'
+RBAC_PUT_EXTEND = 'put_extend'
 RBAC_DELETE = 'delete'
 RBAC_GET_ONE = 'get_one'
 RBAC_GET_ALL = 'get_all'

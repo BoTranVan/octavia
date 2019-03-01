@@ -290,6 +290,11 @@ class InvalidAmphoraOperatingSystem(OctaviaException):
     message = _('Invalid amphora operating system: %(os_name)s')
 
 
+class InvalidLoadBalancerOperation(APIException):
+    msg = _("The %(type)s load balancer don't support %(action)s.")
+    code = 409
+
+
 class QuotaException(APIException):
     msg = _('Quota has been met for resources: %(resource)s')
     code = 403
@@ -346,6 +351,11 @@ class InvalidSortDirection(APIException):
 
 class InvalidMarker(APIException):
     msg = _("Supplied pagination marker '%(key)s' is not valid.")
+    code = 400
+
+
+class InvalidNumber(APIException):
+    msg = _("%(value)s is not a integer number.")
     code = 400
 
 
@@ -409,3 +419,14 @@ class DistributorUnsupportOptionError(APIException):
     msg = _("The '%(type)s' distributor does not support a requested "
             "option: %(user_msg)s")
     code = 501
+
+
+class UnsupportedOperation(APIException):
+    msg = _("Currently, the %(operation)s is unsupported.")
+    code = 501
+
+
+class ExceededNumber(APIException):
+    msg = _("The max number of amphorea belong to single load balancer "
+            "mustn't exceed %(max_num)s.")
+    code = 409

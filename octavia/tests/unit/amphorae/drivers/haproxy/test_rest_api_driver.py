@@ -94,6 +94,10 @@ class TestHaproxyAmphoraLoadBalancerDriverTest(base.TestCase):
                             'mtu': FAKE_MTU,
                             'host_routes': host_routes_data}
 
+        self.subnet = network_models.Subnet(gateway_ip='10.10.10.1',
+                                            host_routes=self.host_routes,
+                                            cidr='10.10.10.0/24')
+
         self.timeout_dict = {constants.REQ_CONN_TIMEOUT: 1,
                              constants.REQ_READ_TIMEOUT: 2,
                              constants.CONN_MAX_RETRIES: 3,
@@ -309,17 +313,18 @@ class TestHaproxyAmphoraLoadBalancerDriverTest(base.TestCase):
         test_amp = sample_configs.sample_amphora_tuple(
             frontend_ip="10.10.10.6")
         test_subnet_info = {'frontend_ip': '10.10.10.6', 'mac_address': '123',
-                            'host_routes': [{'nexthop': '192.0.2.1',
-                                             'destination': '198.51.100.0/24'},
-                                            {'nexthop': '192.0.2.1',
-                                             'destination': '203.0.113.0/24'}],
-                            'gateway': '192.51.100.1',
-                            'subnet_cidr': '198.51.100.0/24', 'mtu': 1450}
+                            'host_routes': [{'destination': '198.51.100.0/24',
+                                             'nexthop': '192.0.2.1'},
+                                            {'destination': '203.0.113.0/24',
+                                             'nexthop': '192.0.2.1'}],
+                            'gateway': '10.10.10.1',
+                            'subnet_cidr': '10.10.10.0/24', 'mtu': 1450}
         amphorae_network_config = mock.MagicMock()
         amphorae_network_config.get().vip_subnet.cidr = FAKE_CIDR
         amphorae_network_config.get().vip_subnet.gateway_ip = FAKE_GATEWAY
         amphorae_network_config.get().vip_subnet.host_routes = self.host_routes
         amphorae_network_config.get().frontend_port = self.port
+        amphorae_network_config.get().frontend_subnet = self.subnet
         self.driver.post_vip_plug(test_amp, test_lb, amphorae_network_config)
         self.driver.client.plug_vip.assert_called_once_with(
             test_amp, test_lb.vip.ip_address, test_subnet_info)

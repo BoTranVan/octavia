@@ -180,7 +180,11 @@ class HaproxyAmphoraLoadBalancerDriver(
 
     def post_vip_plug(self, amphora, load_balancer, amphorae_network_config):
         if amphora.status != consts.DELETED:
-            subnet = amphorae_network_config.get(amphora.id).vip_subnet
+            subnet = (amphorae_network_config.get(
+                      amphora.id).frontend_subnet if
+                      load_balancer.topology ==
+                      consts.TOPOLOGY_ACTIVE_ACTIVE else
+                      amphorae_network_config.get(amphora.id).vip_subnet)
             # NOTE(blogan): using the vrrp port here because that
             # is what the allowed address pairs network driver sets
             # this particular port to.  This does expose a bit of

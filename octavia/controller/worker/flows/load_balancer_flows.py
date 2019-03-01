@@ -15,7 +15,6 @@
 
 from oslo_config import cfg
 from oslo_log import log as logging
-from stevedore import driver as stevedore_driver
 from taskflow.patterns import linear_flow
 from taskflow.patterns import unordered_flow
 
@@ -196,7 +195,8 @@ class LoadBalancerFlows(object):
             post_create_LB_flow.add(vrrp_subflow)
 
         if topology == constants.TOPOLOGY_ACTIVE_ACTIVE:
-            bgp_subflow = self._get_distributor_flows(prefix, distributor)
+            bgp_subflow = self.amp_flows.get_distributor_flows(
+                prefix, distributor)
             post_create_LB_flow.add(bgp_subflow)
 
         post_create_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
@@ -206,21 +206,6 @@ class LoadBalancerFlows(object):
                 name=sf_name + '-' + constants.MARK_LB_ACTIVE_INDB,
                 requires=constants.LOADBALANCER))
         return post_create_LB_flow
-
-    def _get_distributor_flows(self, prefix, distributor):
-        distributor_driver = stevedore_driver.DriverManager(
-            namespace='octavia.distributor.drivers',
-            name=distributor.distributor_driver, invoke_on_load=True).driver
-        sf_name = prefix + '-' + constants.GET_BGP_SUBFLOW
-        distributor_subflow = linear_flow.Flow(sf_name)
-        distributor_subflow.add(
-            amphora_driver_tasks.AmphoraUpdateFrontendInterface(
-                name=sf_name + '-' + constants.AMP_UPDATE_FRONTEND_INTF,
-                requires=constants.LOADBALANCER,
-                provides=constants.LOADBALANCER))
-        distributor_subflow.add(
-            *distributor_driver.get_register_amphorae_subflow())
-        return distributor_subflow
 
     def _get_delete_listeners_flow(self, lb):
         """Sets up an internal delete flow

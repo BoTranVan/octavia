@@ -975,6 +975,75 @@ class ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             with excutils.save_and_reraise_exception():
                 LOG.error("Failover exception: %s", e)
 
+    def _perform_loadbalancer_extension(self, priority, lb):
+        """Internal method to perform extension operations for a loadbalancer.
+
+        :param priority: The create priority
+        :returns: None
+        """
+
+        stored_params = {constants.BUILD_TYPE_PRIORITY: priority,
+                         constants.LOADBALANCER_ID: lb.id,
+                         constants.DISTRIBUTOR: lb.distributor}
+
+        if (CONF.house_keeping.spare_amphora_pool_size == 0) and (
+                CONF.nova.enable_anti_affinity is False):
+            LOG.warning("Extend load balancer with no spares pool may "
+                        "cause delays in extension times while a new "
+                        "amphora instance boots.")
+
+        # if we run with anti-affinity we need to set the server group
+        # as well
+        if CONF.nova.enable_anti_affinity and lb:
+            stored_params[constants.SERVER_GROUP_ID] = lb.server_group_id
+        if lb.flavor_id:
+            stored_params[constants.FLAVOR] = (
+                self._flavor_repo.get_flavor_metadata_dict(
+                    db_apis.get_session(), lb.flavor_id))
+        else:
+            stored_params[constants.FLAVOR] = {}
+
+        flows = self._amphora_flows.get_extension_flow(
+            distributor=lb.distributor, load_balancer=lb)
+
+        failover_amphora_tf = self._taskflow_load(flows, store=stored_params)
+
+        with tf_logging.DynamicLoggingListener(
+                failover_amphora_tf, log=LOG,
+                hide_inputs_outputs_of=self._exclude_result_logging_tasks):
+
+            failover_amphora_tf.run()
+
+    def extension_loadbalancer(self, load_balancer_id):
+        """Perform extension operations for a load balancer.
+
+        :param load_balancer_id: ID for load balancer to failover
+        :returns: None
+        :raises LBNotFound: The referenced load balancer was not found
+        """
+
+        try:
+            lb = self._lb_repo.get(db_apis.get_session(),
+                                   id=load_balancer_id)
+
+            # Exclude amphora already deleted
+            amps = [a for a in lb.amphorae if a.status != constants.DELETED]
+            for i in range(0, (int(lb.expected_amphora_number) - len(amps))):
+                self._perform_loadbalancer_extension(
+                    constants.LB_CREATE_EXTENSION_PRIORITY, lb)
+
+            self._lb_repo.update(
+                db_apis.get_session(), load_balancer_id,
+                provisioning_status=constants.ACTIVE)
+
+        except Exception as e:
+            with excutils.save_and_reraise_exception():
+                LOG.error("LB %(lbid)s failover exception: %(exc)s",
+                          {'lbid': load_balancer_id, 'exc': e})
+                self._lb_repo.update(
+                    db_apis.get_session(), load_balancer_id,
+                    provisioning_status=constants.ERROR)
+
     def failover_loadbalancer(self, load_balancer_id):
         """Perform failover operations for a load balancer.
 

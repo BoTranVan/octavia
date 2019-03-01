@@ -436,7 +436,8 @@ class LoadBalancer(BaseDataModel):
                  topology=None, vip=None, listeners=None, amphorae=None,
                  pools=None, vrrp_group=None, server_group_id=None,
                  created_at=None, updated_at=None, provider=None, tags=None,
-                 flavor_id=None, distributor_id=None):
+                 flavor_id=None, distributor_id=None, amphora_number=None,
+                 expected_amphora_number=None):
 
         self.id = id
         self.project_id = project_id
@@ -458,6 +459,8 @@ class LoadBalancer(BaseDataModel):
         self.tags = tags or []
         self.flavor_id = flavor_id
         self.distributor_id = distributor_id
+        self.amphora_number = amphora_number
+        self.expected_amphora_number = expected_amphora_number
 
     def update(self, update_dict):
         for key, value in update_dict.items():

@@ -98,6 +98,21 @@ class ProviderDriver(object):
             operator_fault_string='This provider does not support failing '
                                   'over load balancers.')
 
+    def loadbalancer_extension(self, loadbalancer_id):
+        """Performs a extension of a load balancer.
+
+        :param loadbalancer_id: ID of the load balancer to failover.
+        :type loadbalancer_id: string
+        :return: Nothing if the failover request was accepted.
+        :raises DriverError: An unexpected error occurred in the driver.
+        :raises: NotImplementedError if driver does not support request.
+        """
+        raise exceptions.NotImplementedError(
+            user_fault_string='This provider does not support extending '
+                              'load balancers.',
+            operator_fault_string='This provider does not support '
+                                  'extending load balancers.')
+
     def loadbalancer_update(self, old_loadbalancer, new_loadbalncer):
         """Updates a load balancer.
 

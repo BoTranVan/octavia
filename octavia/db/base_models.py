@@ -102,6 +102,9 @@ class OctaviaBase(models.ModelBase):
                                 item.to_data_model(_graph_nodes=_graph_nodes))
                     elif not isinstance(item, OctaviaBase):
                         listref.append(item)
+            elif (isinstance(attr, (int, str)) and
+                  (attr_name in dir(dm_self))):
+                setattr(dm_self, attr_name, attr)
         return dm_self
 
     @staticmethod

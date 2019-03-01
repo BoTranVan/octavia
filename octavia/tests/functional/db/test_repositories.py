@@ -156,6 +156,7 @@ class AllRepositoriesTest(base.OctaviaDBTestBase):
               'project_id': uuidutils.generate_uuid(),
               'distributor_id': None,
               'id': uuidutils.generate_uuid(), 'flavor_id': None,
+              'expected_amphora_number': None,
               'tags': ['test_tag']}
         vip = {'ip_address': '192.0.2.1',
                'port_id': uuidutils.generate_uuid(),
@@ -170,6 +171,7 @@ class AllRepositoriesTest(base.OctaviaDBTestBase):
         del lb_dm_dict['pools']
         del lb_dm_dict['created_at']
         del lb_dm_dict['updated_at']
+        del lb_dm_dict['amphora_number']
         self.assertEqual(lb, lb_dm_dict)
         vip_dm_dict = lb_dm.vip.to_dict()
         vip_dm_dict['load_balancer_id'] = lb_dm.id
@@ -4280,6 +4282,7 @@ class AmphoraRepositoryTest(BaseRepositoryTest):
     def test_get_lb_for_amphora(self):
         amphora = self.create_amphora(self.FAKE_UUID_1)
         self.amphora_repo.associate(self.session, self.lb.id, amphora.id)
+        self.lb.amphora_number = self.lb.amphora_number + 1
         lb = self.amphora_repo.get_lb_for_amphora(self.session, amphora.id)
         self.assertIsNotNone(lb)
         self.assertEqual(self.lb, lb)

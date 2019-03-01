@@ -318,6 +318,49 @@ class HandleNetworkDeltas(BaseNetworkTask):
                     pass
 
 
+class PlugAmphoraVIP(BaseNetworkTask):
+    """Task to plumb a VIP port for a amphora"""
+
+    def execute(self, amphora, loadbalancer, subnet=None):
+        """Task to plumb a VIP port for a amphora"""
+
+        LOG.debug("Plumbing VIP for amphora id: %s", amphora.id)
+        if loadbalancer.topology == constants.TOPOLOGY_ACTIVE_ACTIVE:
+            subnet = loadbalancer.distributor.frontend_subnet
+        amps_data = self.network_driver.plug_amphora_vip(amphora,
+                                                         loadbalancer,
+                                                         loadbalancer.vip,
+                                                         subnet)
+        return amps_data
+
+    def revert(self, result, amphora, loadbalancer,
+               subnet=None, *args, **kwargs):
+        """Handle a failure to plumb a vip port for a amphora."""
+
+        if isinstance(result, failure.Failure):
+            return
+        LOG.warning("Unable to plug VIP for amphora id %s",
+                    amphora.id)
+
+        try:
+            # Make sure we have the current port IDs for cleanup
+            for amp_data in result:
+                for amp in six.moves.filter(
+                        # pylint: disable=cell-var-from-loop
+                        lambda amp: amp.id == amp_data.id,
+                        loadbalancer.amphorae):
+                    amp.vrrp_port_id = amp_data.vrrp_port_id
+                    amp.frontend_port_id = amp_data.frontend_port_id
+                    amp.ha_port_id = amp_data.ha_port_id
+
+            self.network_driver.unplug_amphora_vip(amphora, loadbalancer,
+                                                   loadbalancer.vip)
+        except Exception as e:
+            LOG.error("Failed to unplug VIP.  Resources may still "
+                      "be in use from vip: %(vip)s due to error: %(except)s",
+                      {'vip': loadbalancer.vip.ip_address, 'except': e})
+
+
 class PlugVIP(BaseNetworkTask):
     """Task to plumb a VIP."""
 
@@ -349,6 +392,7 @@ class PlugVIP(BaseNetworkTask):
                         lambda amp: amp.id == amp_data.id,
                         loadbalancer.amphorae):
                     amphora.vrrp_port_id = amp_data.vrrp_port_id
+                    amphora.frontend_port_id = amp_data.frontend_port_id
                     amphora.ha_port_id = amp_data.ha_port_id
 
             self.network_driver.unplug_vip(loadbalancer, loadbalancer.vip)

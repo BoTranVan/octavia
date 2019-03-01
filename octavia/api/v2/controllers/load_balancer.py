@@ -647,7 +647,8 @@ class LoadBalancersController(base.BaseController):
         is_children = (
             id and remainder and (
                 remainder[0] == 'status' or remainder[0] == 'statuses' or (
-                    remainder[0] == 'stats' or remainder[0] == 'failover'
+                    remainder[0] == 'stats' or remainder[0] == 'failover' or
+                    remainder[0] == 'extension'
                 )
             )
         )
@@ -660,6 +661,8 @@ class LoadBalancersController(base.BaseController):
                 return StatisticsController(lb_id=id), remainder
             elif controller == 'failover':
                 return FailoverController(lb_id=id), remainder
+            elif controller == 'extension':
+                return ExtendLoadBalancerAmphora(lb_id=id), remainder
         return None
 
 
@@ -745,3 +748,61 @@ class FailoverController(LoadBalancersController):
                      "provider %s", self.lb_id, driver.name)
             driver_utils.call_provider(
                 driver.name, driver.loadbalancer_failover, self.lb_id)
+
+
+class ExtendLoadBalancerAmphora(LoadBalancersController):
+
+    def __init__(self, lb_id):
+        super(ExtendLoadBalancerAmphora, self).__init__()
+        self.lb_id = lb_id
+
+    @wsme_pecan.wsexpose(lb_types.LoadBalancerRootResponse,
+                         wtypes.text, status_code=202)
+    def put(self, number, **kwargs):
+        try:
+            count = int(number)
+        except ValueError:
+            raise exceptions.InvalidNumber(value=str(number))
+        context = pecan.request.context.get('octavia_context')
+        db_lb = self._get_db_lb(context.session, self.lb_id,
+                                show_deleted=False)
+
+        self._auth_validate_action(context, db_lb.project_id,
+                                   constants.RBAC_PUT_EXTEND)
+
+        if db_lb.topology != constants.TOPOLOGY_ACTIVE_ACTIVE:
+            raise exceptions.InvalidLoadBalancerOperation(
+                type=db_lb.topology, action='extension')
+
+        try:
+            flavor_dict = (
+                self.repositories.flavor.get_flavor_metadata_dict(
+                    context.session, db_lb.flavor_id))
+        except sa_exception.NoResultFound:
+            raise exceptions.ValidationException(
+                detail=_("Invalid flavor_id."))
+        if count > flavor_dict[constants.MAX_AMPHORA_NUM]:
+            raise exceptions.ExceededNumber(
+                max_num=str(flavor_dict[constants.MAX_AMPHORA_NUM]))
+
+        lb_amphorea = self.repositories.amphora.get_all_API_list(
+            context.session, **{"load_balancer_id": self.lb_id})[0]
+        old_count = len(lb_amphorea)
+        if count < old_count:
+            raise exceptions.UnsupportedOperation(
+                operation="reducing amphora number")
+
+        if count == old_count:
+            return
+
+        driver = driver_factory.get_driver(db_lb.provider)
+
+        with db_api.get_lock_session() as lock_session:
+            self._test_lb_status(lock_session, self.lb_id)
+            self.repositories.load_balancer.update(
+                lock_session, self.lb_id,
+                **{'expected_amphora_number': number})
+            LOG.info("Sending extension request for load balancer %s to the "
+                     "provider %s", self.lb_id, driver.name)
+            driver_utils.call_provider(
+                driver.name, driver.loadbalancer_extension, self.lb_id)

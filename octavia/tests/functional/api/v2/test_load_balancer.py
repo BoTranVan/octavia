@@ -984,6 +984,16 @@ class TestLoadBalancer(base.BaseAPITest):
                       "'noop_driver-alt'".format(test_flavor_id),
                       response.json.get('faultstring'))
 
+    def test_get_amphora_number(self):
+        lb = self.create_load_balancer(uuidutils.generate_uuid(),
+                                       name='lb1', project_id=self.project_id,
+                                       tags=['test_tag1']).get(self.root_tag)
+        self.create_amphora(uuidutils.generate_uuid(), lb['id'])
+        self.create_amphora(uuidutils.generate_uuid(), lb['id'])
+        lb = self.get(
+            self.LB_PATH.format(lb_id=lb.get('id'))).json.get(self.root_tag)
+        self.assertEqual(2, lb['amphora_number'])
+
     def test_get_all_admin(self):
         project_id = uuidutils.generate_uuid()
         lb1 = self.create_load_balancer(uuidutils.generate_uuid(),
@@ -1924,6 +1934,40 @@ class TestLoadBalancer(base.BaseAPITest):
         path = self.LB_PATH.format(lb_id='bad_uuid')
         self.delete(path, status=404)
 
+    def test_extension(self):
+        fp = self.flavor_profile_repo.create(
+            self.session, id=uuidutils.generate_uuid(),
+            name='fp1', provider_name='noop_driver',
+            flavor_data='{"min_amphora_num": 6, "max_amphora_num": 32}')
+        flavor = self.flavor_repo.create(
+            self.session, id=uuidutils.generate_uuid(),
+            name='flavor1', enabled=True,
+            flavor_profile_id=fp.id)
+        lb = self.lb_repo.create(
+            self.session,
+            id=uuidutils.generate_uuid(), name='lb1',
+            flavor_id=flavor.id,
+            topology=constants.TOPOLOGY_ACTIVE_ACTIVE,
+            provisioning_status='ACTIVE', provider='noop_driver',
+            operating_status='ONLINE', enabled=True)
+        lb_dict = lb.to_dict()
+        lb = self.set_lb_status(lb_dict.get('id'))
+        self.create_amphora(uuidutils.generate_uuid(), lb_dict.get('id'))
+        self.create_amphora(uuidutils.generate_uuid(), lb_dict.get('id'))
+        self.app.put(self._get_full_path(
+            self.LB_PATH.format(lb_id=lb_dict.get('id')) + "/extension/5"),
+            status=202)
+        response = self.app.get(self._get_full_path(self.LB_PATH.format(
+            lb_id=lb_dict.get('id')))).json.get(self.root_tag)
+        self.assertEqual(5, response['expected_amphora_number'])
+
+        response = self.app.put(self._get_full_path(
+            self.LB_PATH.format(lb_id=lb_dict.get('id')) + "/extension/33"),
+            status=409)
+        err_msg = ("The max number of amphorea belong to single load "
+                   "balancer mustn't exceed 32.")
+        self.assertEqual(err_msg, response.json.get('faultstring'))
+
     def test_failover(self):
         project_id = uuidutils.generate_uuid()
         lb = self.create_load_balancer(uuidutils.generate_uuid(),
@@ -2350,6 +2394,8 @@ class TestLoadBalancerGraph(base.BaseAPITest):
             'vip_qos_policy_id': None,
             'flavor_id': None,
             'provider': 'noop_driver',
+            'amphora_number': 0,
+            'expected_amphora_number': None,
             'tags': []
         }
         expected_lb.update(create_lb)

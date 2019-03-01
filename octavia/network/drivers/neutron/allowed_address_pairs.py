@@ -753,3 +753,95 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
             except (neutron_client_exceptions.NotFound,
                     neutron_client_exceptions.PortNotFoundClient):
                 pass
+
+    def plug_amphora_vip(self, amphora, load_balancer, vip, subnet_id=None):
+        if self.sec_grp_enabled:
+            self._update_vip_security_group(load_balancer, vip)
+        subnet = self.get_subnet(subnet_id if subnet_id else vip.subnet_id)
+        interface = self._get_plugged_interface(
+            amphora.compute_id, subnet.network_id, amphora.lb_network_ip)
+        if not interface:
+            interface = self._plug_amphora_vip(amphora, subnet,
+                                               load_balancer.topology)
+
+        self._add_vip_address_pair(interface.port_id, vip.ip_address)
+        if self.sec_grp_enabled:
+            self._add_vip_security_group_to_port(load_balancer.id,
+                                                 interface.port_id)
+        auxiliary_ip = None
+        for fixed_ip in interface.fixed_ips:
+            is_correct_subnet = fixed_ip.subnet_id == subnet.id
+            is_management_ip = fixed_ip.ip_address == amphora.lb_network_ip
+            if is_correct_subnet and not is_management_ip:
+                auxiliary_ip = fixed_ip.ip_address
+                break
+        if load_balancer.topology == constants.TOPOLOGY_ACTIVE_ACTIVE:
+            vrrp_ip = None
+            vrrp_port_id = None
+            frontend_ip = auxiliary_ip
+            frontend_port_id = interface.port_id
+        else:
+            vrrp_ip = auxiliary_ip
+            vrrp_port_id = interface.port_id
+            frontend_ip = None
+            frontend_port_id = None
+
+        return [data_models.Amphora(
+            id=amphora.id,
+            compute_id=amphora.compute_id,
+            vrrp_ip=vrrp_ip,
+            ha_ip=vip.ip_address,
+            vrrp_port_id=vrrp_port_id,
+            frontend_ip=frontend_ip,
+            frontend_port_id=frontend_port_id,
+            ha_port_id=vip.port_id)]
+
+    def unplug_amphora_vip(self, amphora, load_balancer, vip):
+        if load_balancer.topology == constants.TOPOLOGY_ACTIVE_ACTIVE:
+            self._unplug_frontend_port(load_balancer)
+
+        try:
+            subnet = self.get_subnet(vip.subnet_id)
+        except base.SubnetNotFound:
+            msg = ("Can't unplug vip because vip subnet {0} was not "
+                   "found").format(vip.subnet_id)
+            LOG.exception(msg)
+            raise base.PluggedVIPNotFound(msg)
+
+        interface = self._get_plugged_interface(
+            amphora.compute_id, subnet.network_id, amphora.lb_network_ip)
+        if not interface:
+            # Thought about raising PluggedVIPNotFound exception but
+            # then that wouldn't evaluate all amphorae, so just return
+            LOG.debug('Cannot get amphora %s interface, skipped',
+                      amphora.compute_id)
+            return
+        try:
+            self.unplug_network(amphora.compute_id, subnet.network_id)
+        except Exception:
+            pass
+        try:
+            aap_update = {'port': {
+                'allowed_address_pairs': []
+            }}
+            self.neutron_client.update_port(interface.port_id,
+                                            aap_update)
+        except Exception:
+            message = _('Error unplugging VIP. Could not clear '
+                        'allowed address pairs from port '
+                        '{port_id}.').format(port_id=vip.port_id)
+            LOG.exception(message)
+            raise base.UnplugVIPException(message)
+
+        # Delete the VRRP port if we created it
+        try:
+            port = self.get_port(amphora.vrrp_port_id)
+            if port.name.startswith('octavia-lb-vrrp-'):
+                self.neutron_client.delete_port(amphora.vrrp_port_id)
+        except (neutron_client_exceptions.NotFound,
+                neutron_client_exceptions.PortNotFoundClient):
+            pass
+        except Exception as e:
+            LOG.error('Failed to delete port.  Resources may still be in '
+                      'use for port: %(port)s due to error: %s(except)s',
+                      {'port': amphora.vrrp_port_id, 'except': e})

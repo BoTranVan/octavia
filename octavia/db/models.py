@@ -35,6 +35,7 @@ from octavia.api.v2.types import load_balancer
 from octavia.api.v2.types import member
 from octavia.api.v2.types import pool
 from octavia.api.v2.types import quotas
+from octavia.common import constants
 from octavia.common import data_models
 from octavia.db import base_models
 from octavia.i18n import _
@@ -384,6 +385,7 @@ class LoadBalancer(base_models.BASE, base_models.IdMixin,
                              back_populates="load_balancer")
     listeners = orm.relationship('Listener', cascade='delete', uselist=True,
                                  back_populates='load_balancer')
+    expected_amphora_number = sa.Column(sa.Integer, nullable=True)
     _tags = orm.relationship(
         'Tags',
         single_parent=True,
@@ -401,6 +403,10 @@ class LoadBalancer(base_models.BASE, base_models.IdMixin,
     distributor = orm.relationship("Distributor", uselist=False,
                                    backref=orm.backref("load_balancers",
                                                        uselist=True))
+
+    @property
+    def amphora_number(self):
+        return len([a for a in self.amphorae if a.status != constants.DELETED])
 
 
 class VRRPGroup(base_models.BASE):

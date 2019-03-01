@@ -1434,6 +1434,78 @@ class TestControllerWorker(base.TestCase):
         mock_update.assert_called_with(_db_session, LB_ID,
                                        provisioning_status=constants.ACTIVE)
 
+    @mock.patch('octavia.controller.worker.controller_worker.'
+                'ControllerWorker._perform_loadbalancer_extension')
+    @mock.patch('octavia.db.repositories.LoadBalancerRepository.update')
+    def test_extension_loadbalancer(self,
+                                    mock_update,
+                                    mock_perform,
+                                    mock_api_get_session,
+                                    mock_dyn_log_listener,
+                                    mock_taskflow_load,
+                                    mock_distributor_repo_get,
+                                    mock_pool_repo_get,
+                                    mock_member_repo_get,
+                                    mock_l7rule_repo_get,
+                                    mock_l7policy_repo_get,
+                                    mock_listener_repo_get,
+                                    mock_lb_repo_get,
+                                    mock_health_mon_repo_get,
+                                    mock_amp_repo_get):
+        _load_balancer_mock.amphorae = [_amphora_mock]
+        cw = controller_worker.ControllerWorker()
+        _load_balancer_mock.expected_amphora_number = 5
+        cw.extension_loadbalancer('123')
+        self.assertEqual(4, mock_perform.call_count)
+
+        mock_perform.reset
+        _load_balancer_mock.expected_amphora_number = 2
+        cw.extension_loadbalancer('123')
+        mock_perform.assert_called_with(
+            constants.LB_CREATE_EXTENSION_PRIORITY, _load_balancer_mock)
+        mock_update.assert_called_with(_db_session, '123',
+                                       provisioning_status=constants.ACTIVE)
+
+        mock_perform.reset
+        mock_perform.side_effect = OverflowError()
+        self.assertRaises(OverflowError, cw.extension_loadbalancer, 123)
+        mock_update.assert_called_with(_db_session, 123,
+                                       provisioning_status=constants.ERROR)
+
+    @mock.patch('octavia.db.repositories.FlavorRepository.'
+                'get_flavor_metadata_dict', return_value={})
+    @mock.patch('octavia.controller.worker.flows.'
+                'amphora_flows.AmphoraFlows.get_extension_flow',
+                return_value=_flow_mock)
+    def test__perform_loadbalancer_extension(self,
+                                             mock_get_extension_flow,
+                                             mock_get_flavor_meta,
+                                             mock_api_get_session,
+                                             mock_dyn_log_listener,
+                                             mock_taskflow_load,
+                                             mock_distributor_repo_get,
+                                             mock_pool_repo_get,
+                                             mock_member_repo_get,
+                                             mock_l7rule_repo_get,
+                                             mock_l7policy_repo_get,
+                                             mock_listener_repo_get,
+                                             mock_lb_repo_get,
+                                             mock_health_mon_repo_get,
+                                             mock_amp_repo_get):
+        cw = controller_worker.ControllerWorker()
+        _load_balancer_mock.id = '__mock_id__'
+        _load_balancer_mock.distributor = '__fake_distributor_'
+        cw._perform_loadbalancer_extension(1, _load_balancer_mock)
+        (base_taskflow.BaseTaskFlowEngine._taskflow_load.
+            assert_called_once_with(
+                _flow_mock,
+                store={constants.BUILD_TYPE_PRIORITY: 1,
+                       constants.FLAVOR: {},
+                       constants.LOADBALANCER_ID: '__mock_id__',
+                       constants.DISTRIBUTOR: '__fake_distributor_'
+                       }))
+        _flow_mock.run.assert_called_once_with()
+
     @mock.patch('octavia.controller.worker.flows.'
                 'amphora_flows.AmphoraFlows.cert_rotate_amphora_flow',
                 return_value=_flow_mock)
