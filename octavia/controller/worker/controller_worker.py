@@ -932,9 +932,14 @@ class ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         else:
             stored_params[constants.FLAVOR] = {}
 
+        distributor = None
+        if lb.topology == constants.TOPOLOGY_ACTIVE_ACTIVE:
+            distributor = getattr(lb, "distributor", None)
+            stored_params[constants.DISTRIBUTOR] = distributor
+
         failover_amphora_tf = self._taskflow_load(
             self._amphora_flows.get_failover_flow(
-                role=amp.role, load_balancer=lb),
+                role=amp.role, load_balancer=lb, distributor=distributor),
             store=stored_params)
 
         with tf_logging.DynamicLoggingListener(
@@ -1006,13 +1011,13 @@ class ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         flows = self._amphora_flows.get_extension_flow(
             distributor=lb.distributor, load_balancer=lb)
 
-        failover_amphora_tf = self._taskflow_load(flows, store=stored_params)
+        extension_amphora_tf = self._taskflow_load(flows, store=stored_params)
 
         with tf_logging.DynamicLoggingListener(
-                failover_amphora_tf, log=LOG,
+                extension_amphora_tf, log=LOG,
                 hide_inputs_outputs_of=self._exclude_result_logging_tasks):
 
-            failover_amphora_tf.run()
+            extension_amphora_tf.run()
 
     def extension_loadbalancer(self, load_balancer_id):
         """Perform extension operations for a load balancer.

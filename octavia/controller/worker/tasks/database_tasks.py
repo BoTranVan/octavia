@@ -447,7 +447,9 @@ class UpdateAmpFailoverDetails(BaseDatabaseTask):
                                   ha_ip=amp_data.ha_ip,
                                   vrrp_port_id=amp_data.vrrp_port_id,
                                   ha_port_id=amp_data.ha_port_id,
-                                  vrrp_id=amp_data.vrrp_id)
+                                  vrrp_id=amp_data.vrrp_id,
+                                  frontend_port_id=amp_data.frontend_port_id,
+                                  frontend_ip=amp_data.frontend_ip)
 
 
 class AssociateFailoverAmphoraWithLBID(BaseDatabaseTask):
@@ -1556,7 +1558,9 @@ class GetAmphoraDetails(BaseDatabaseTask):
                                    ha_port_id=amphora.ha_port_id,
                                    role=amphora.role,
                                    vrrp_id=amphora.vrrp_id,
-                                   vrrp_priority=amphora.vrrp_priority)
+                                   vrrp_priority=amphora.vrrp_priority,
+                                   frontend_ip=amphora.frontend_ip,
+                                   frontend_port_id=amphora.frontend_port_id)
 
 
 class GetAmphoraeFromLoadbalancer(BaseDatabaseTask):

@@ -317,7 +317,7 @@ class AmphoraFlows(object):
         return delete_amphora_flow
 
     def get_failover_flow(self, role=constants.ROLE_STANDALONE,
-                          load_balancer=None):
+                          load_balancer=None, distributor=None):
         """Creates a flow to failover a stale amphora
 
         :returns: The flow for amphora failover
@@ -478,6 +478,13 @@ class AmphoraFlows(object):
                 database_tasks.MarkAmphoraStandAloneInDB(
                     name=constants.MARK_AMP_STANDALONE_INDB,
                     requires=constants.AMPHORA))
+        elif role == constants.ROLE_ACTIVE:
+            failover_amphora_flow.add(self.get_distributor_flows(
+                'octavia-extension-distributor-flow', distributor))
+            failover_amphora_flow.add(
+                database_tasks.MarkAmphoraActiveInDB(
+                    name=constants.MARK_AMP_ACTIVE_INDB,
+                    requires=constants.AMPHORA))
 
         failover_amphora_flow.add(amphora_driver_tasks.ListenersStart(
             requires=(constants.LOADBALANCER, constants.LISTENERS,
@@ -533,8 +540,8 @@ class AmphoraFlows(object):
             requires=constants.LOADBALANCER, provides=constants.LISTENERS))
         extension_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER, provides=constants.AMPHORAE))
-        extension_flow.add(amphora_driver_tasks.AmphoraePostVIPPlug(
-            requires=(constants.LOADBALANCER,
+        extension_flow.add(amphora_driver_tasks.AmphoraPostVIPPlug(
+            requires=(constants.AMPHORA, constants.LOADBALANCER,
                       constants.AMPHORAE_NETWORK_CONFIG)))
 
         # Listeners update needs to be run on all amphora to update

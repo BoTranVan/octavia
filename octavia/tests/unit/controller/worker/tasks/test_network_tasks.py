@@ -712,6 +712,7 @@ class TestNetworkTasks(base.TestCase):
 
         amphorae_network_config = mock.MagicMock()
         amphorae_network_config.get().vrrp_port = vrrp_port
+        amphorae_network_config.get().frontend_port = None
 
         plugvipport = network_tasks.PlugVIPPort()
         plugvipport.execute(self.amphora_mock, amphorae_network_config)

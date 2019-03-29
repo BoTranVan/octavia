@@ -539,21 +539,29 @@ class PlugVIPPort(BaseNetworkTask):
     """Task to plug a VIP into a compute instance."""
 
     def execute(self, amphora, amphorae_network_config):
-        vrrp_port = amphorae_network_config.get(amphora.id).vrrp_port
+        auxiliary_port = (
+            amphorae_network_config.get(amphora.id).frontend_port if
+            amphorae_network_config.get(amphora.id).frontend_port else
+            amphorae_network_config.get(amphora.id).vrrp_port)
         LOG.debug('Plugging VIP VRRP port ID: %(port_id)s into compute '
                   'instance: %(compute_id)s.',
-                  {'port_id': vrrp_port.id, 'compute_id': amphora.compute_id})
-        self.network_driver.plug_port(amphora, vrrp_port)
+                  {'port_id': auxiliary_port.id,
+                   'compute_id': amphora.compute_id})
+        self.network_driver.plug_port(amphora, auxiliary_port)
 
     def revert(self, result, amphora, amphorae_network_config,
                *args, **kwargs):
-        vrrp_port = None
+        auxiliary_port = None
         try:
-            vrrp_port = amphorae_network_config.get(amphora.id).vrrp_port
-            self.network_driver.unplug_port(amphora, vrrp_port)
+            auxiliary_port = (
+                amphorae_network_config.get(amphora.id).frontend_port if
+                amphorae_network_config.get(amphora.id).frontend_port else
+                amphorae_network_config.get(amphora.id).vrrp_port)
+            self.network_driver.unplug_port(amphora, auxiliary_port)
         except Exception:
-            LOG.warning('Failed to unplug vrrp port: %(port)s from amphora: '
-                        '%(amp)s', {'port': vrrp_port.id, 'amp': amphora.id})
+            LOG.warning('Failed to unplug (vrrp/frontend) port: %(port)s '
+                        'from amphora: %(amp)s', {'port': auxiliary_port.id,
+                                                  'amp': amphora.id})
 
 
 class WaitForPortDetach(BaseNetworkTask):
