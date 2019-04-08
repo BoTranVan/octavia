@@ -66,6 +66,29 @@ class AmpListenersUpdate(BaseAmphoraTask):
                                      status=constants.ERROR)
 
 
+class AmpsListenersUpdate(BaseAmphoraTask):
+    """Task to update the listeners on all amphorae of one load balancer."""
+
+    def execute(self, listeners, loadbalancer, timeout_dict=()):
+        LOG.info("Update listeners belong load balancer %s.", loadbalancer.id)
+        amp_index = 0
+        for amp in loadbalancer.amphorae:
+            if amp.status == constants.DELETED:
+                amp_index += 1
+                continue
+            try:
+                self.amphora_driver.update_amphora_listeners(
+                    listeners, amp_index, loadbalancer.amphorae, timeout_dict)
+            except Exception as e:
+                amphora_id = loadbalancer.amphorae[amp_index].id
+                LOG.error('Failed to update listeners on amphora %s. Skipping '
+                          'this amphora as it is failing to update due to: %s',
+                          amphora_id, str(e))
+                self.amphora_repo.update(db_apis.get_session(), amphora_id,
+                                         status=constants.ERROR)
+            amp_index += 1
+
+
 class ListenersUpdate(BaseAmphoraTask):
     """Task to update amphora with all specified listeners' configurations."""
 

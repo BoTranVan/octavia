@@ -496,7 +496,7 @@ class AmphoraFlows(object):
 
         return failover_amphora_flow
 
-    def get_extension_flow(self, distributor, load_balancer=None):
+    def get_extension_flow(self, distributor):
         """Extend a amphora for load balancer.
 
         :returns: The flow for loadbalancer extension
@@ -544,35 +544,17 @@ class AmphoraFlows(object):
             requires=(constants.AMPHORA, constants.LOADBALANCER,
                       constants.AMPHORAE_NETWORK_CONFIG)))
 
-        # Listeners update needs to be run on all amphora to update
-        # their peer configurations. So parallelize this with an
-        # unordered subflow.
-        update_amps_subflow = unordered_flow.Flow(
-            constants.UPDATE_AMPS_SUBFLOW)
-
         timeout_dict = {
             constants.CONN_MAX_RETRIES:
                 CONF.haproxy_amphora.active_connection_max_retries,
             constants.CONN_RETRY_INTERVAL:
                 CONF.haproxy_amphora.active_connection_rety_interval}
 
-        # Setup parallel flows for each amp. We don't know the new amp
-        # details at flow creation time, so setup a subflow for each
-        # amp on the LB, they let the task index into a list of amps
-        # to find the amphora it should work on.
-        amp_index = 0
-        for amp in load_balancer.amphorae:
-            if amp.status == constants.DELETED:
-                continue
-            update_amps_subflow.add(
-                amphora_driver_tasks.AmpListenersUpdate(
-                    name=constants.AMP_LISTENER_UPDATE + '-' + str(amp_index),
-                    requires=(constants.LISTENERS, constants.AMPHORAE),
-                    inject={constants.AMPHORA_INDEX: amp_index,
-                            constants.TIMEOUT_DICT: timeout_dict}))
-            amp_index += 1
-
-        extension_flow.add(update_amps_subflow)
+        extension_flow.add(
+            amphora_driver_tasks.AmpsListenersUpdate(
+                name=constants.AMP_LISTENER_UPDATE,
+                requires=(constants.LISTENERS, constants.LOADBALANCER),
+                inject=({constants.TIMEOUT_DICT: timeout_dict})))
 
         # Plug the member networks into the new amphora
         extension_flow.add(network_tasks.CalculateAmphoraDelta(

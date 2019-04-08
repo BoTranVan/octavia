@@ -1964,7 +1964,7 @@ class TestLoadBalancer(base.BaseAPITest):
         response = self.app.put(self._get_full_path(
             self.LB_PATH.format(lb_id=lb_dict.get('id')) + "/extension/33"),
             status=409)
-        err_msg = ("The max number of amphorea belong to single load "
+        err_msg = ("The max number of amphorae belong to single load "
                    "balancer mustn't exceed 32.")
         self.assertEqual(err_msg, response.json.get('faultstring'))
 

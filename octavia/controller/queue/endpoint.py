@@ -60,7 +60,7 @@ class Endpoint(object):
         self.worker.failover_loadbalancer(load_balancer_id)
 
     def extension_load_balancer(self, context, load_balancer_id):
-        LOG.info('Add some amphorea in load balancer \'%s\'...',
+        LOG.info('Add some amphorae in load balancer \'%s\'...',
                  load_balancer_id)
         self.worker.extension_loadbalancer(load_balancer_id)
 

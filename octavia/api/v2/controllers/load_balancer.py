@@ -785,9 +785,10 @@ class ExtendLoadBalancerAmphora(LoadBalancersController):
             raise exceptions.ExceededNumber(
                 max_num=str(flavor_dict[constants.MAX_AMPHORA_NUM]))
 
-        lb_amphorea = self.repositories.amphora.get_all_API_list(
-            context.session, **{"load_balancer_id": self.lb_id})[0]
-        old_count = len(lb_amphorea)
+        lb_amphorae = self.repositories.amphora.get_all_API_list(
+            context.session, show_deleted=False,
+            **{"load_balancer_id": self.lb_id})[0]
+        old_count = len(lb_amphorae)
         if count < old_count:
             raise exceptions.UnsupportedOperation(
                 operation="reducing amphora number")

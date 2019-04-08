@@ -427,6 +427,6 @@ class UnsupportedOperation(APIException):
 
 
 class ExceededNumber(APIException):
-    msg = _("The max number of amphorea belong to single load balancer "
+    msg = _("The max number of amphorae belong to single load balancer "
             "mustn't exceed %(max_num)s.")
     code = 409

@@ -444,6 +444,57 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
         new_port = utils.convert_port_dict_to_model(new_port)
         return self._port_to_vip(new_port, load_balancer)
 
+    def _unplug_amphora_frontend_port(self, amphora, load_balancer):
+
+        try:
+            frontend_subnet = load_balancer.distributor.frontend_subnet
+            subnet = self.get_subnet(frontend_subnet)
+        except base.SubnetNotFound:
+            msg = ("Can't unplug frontend ip because frontend subnet {0} "
+                   "was not found").format(frontend_subnet)
+            LOG.exception(msg)
+            raise base.PluggedVIPNotFound(msg)
+
+        if (amphora in load_balancer.amphorae and
+                amphora.status == constants.AMPHORA_ALLOCATED):
+            interface = self._get_plugged_interface(
+                amphora.compute_id, subnet.network_id, amphora.lb_network_ip)
+            if not interface:
+                # Thought about raising PluggedVIPNotFound exception but
+                # then that wouldn't evaluate all amphorae, so just continue
+                LOG.debug('Cannot get amphora %s interface, skipped',
+                          amphora.compute_id)
+                return
+            try:
+                self.unplug_network(amphora.compute_id, subnet.network_id)
+            except Exception:
+                pass
+            try:
+                aap_update = {'port': {
+                    'allowed_address_pairs': []
+                }}
+                self.neutron_client.update_port(interface.port_id,
+                                                aap_update)
+            except Exception:
+                message = _('Error unplugging frontend port. Could not clear '
+                            'allowed address pairs from port '
+                            '{port_id}.').format(port_id=interface.port_id)
+                LOG.exception(message)
+                raise base.UnplugVIPException(message)
+
+            # Delete the frontend port if we created it
+            try:
+                port = self.get_port(amphora.frontend_port_id)
+                if port.name.startswith('octavia-lb-frentend-'):
+                    self.neutron_client.delete_port(amphora.frontend_port_id)
+            except (neutron_client_exceptions.NotFound,
+                    neutron_client_exceptions.PortNotFoundClient):
+                pass
+            except Exception as e:
+                LOG.error('Failed to delete port.  Resources may still be in '
+                          'use for port: %(port)s due to error: %s(except)s',
+                          {'port': amphora.frontend_port_id, 'except': e})
+
     def _unplug_frontend_port(self, load_balancer):
         try:
             frontend_subnet = load_balancer.distributor.frontend_subnet
@@ -482,7 +533,7 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
                 LOG.exception(message)
                 raise base.UnplugVIPException(message)
 
-            # Delete the VRRP port if we created it
+            # Delete the frontend port if we created it
             try:
                 port = self.get_port(amphora.frontend_port_id)
                 if port.name.startswith('octavia-lb-frentend-'):
@@ -798,7 +849,7 @@ class AllowedAddressPairsDriver(neutron_base.BaseNeutronDriver):
 
     def unplug_amphora_vip(self, amphora, load_balancer, vip):
         if load_balancer.topology == constants.TOPOLOGY_ACTIVE_ACTIVE:
-            self._unplug_frontend_port(load_balancer)
+            self._unplug_amphora_frontend_port(amphora, load_balancer)
 
         try:
             subnet = self.get_subnet(vip.subnet_id)

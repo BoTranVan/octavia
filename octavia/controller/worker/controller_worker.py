@@ -1009,7 +1009,7 @@ class ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             stored_params[constants.FLAVOR] = {}
 
         flows = self._amphora_flows.get_extension_flow(
-            distributor=lb.distributor, load_balancer=lb)
+            distributor=lb.distributor)
 
         extension_amphora_tf = self._taskflow_load(flows, store=stored_params)
 
