@@ -305,6 +305,10 @@ class Ubuntu(BaseOS):
         if (CONF.controller_worker.loadbalancer_topology ==
                 consts.TOPOLOGY_ACTIVE_ACTIVE):
             super(Ubuntu, self).write_vip_interface_file(
+                interface_file_path, primary_interface, vip, ip, broadcast,
+                netmask, gateway, mtu, auxiliary_ip, auxiliary_version,
+                render_host_routes, template_vip)
+            super(Ubuntu, self).write_vip_interface_file(
                 interface_file_path, secondary_interface, vip, ip, broadcast,
                 netmask, gateway, mtu, auxiliary_ip, auxiliary_version,
                 render_host_routes, template_vip)
