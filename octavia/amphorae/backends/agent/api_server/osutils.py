@@ -253,6 +253,9 @@ class Ubuntu(BaseOS):
         name = self._map_package_name(package_name)
         return "dpkg-query -W -f=${{Version}} {name}".format(name=name)
 
+    def get_dummy_network_interface_file(self, interface):
+        return self.get_network_interface_file(interface)
+
     def get_network_interface_file(self, interface):
         if CONF.amphora_agent.agent_server_network_file:
             return CONF.amphora_agent.agent_server_network_file
@@ -309,10 +312,12 @@ class Ubuntu(BaseOS):
                 interface_file_path, primary_interface, vip, ip, broadcast,
                 netmask, gateway, mtu, auxiliary_ip, auxiliary_version,
                 render_host_routes, template_vip)
+            dummy_interface_file_path = self.get_dummy_network_interface_file(
+                secondary_interface)
             super(Ubuntu, self).write_vip_interface_file(
-                interface_file_path, secondary_interface, vip, ip, broadcast,
-                netmask, gateway, mtu, auxiliary_ip, auxiliary_version,
-                render_host_routes, template_vip_dummy)
+                dummy_interface_file_path, secondary_interface, vip, ip,
+                broadcast, netmask, gateway, mtu, auxiliary_ip,
+                auxiliary_version, render_host_routes, template_vip_dummy)
         else:
             super(Ubuntu, self).write_vip_interface_file(
                 interface_file_path, primary_interface, vip, ip, broadcast,
