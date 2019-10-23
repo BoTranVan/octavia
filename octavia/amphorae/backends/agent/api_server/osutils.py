@@ -305,24 +305,23 @@ class Ubuntu(BaseOS):
                                  template_vip=None):
         if not template_vip:
             template_vip = j2_env.get_template(self.ETH_X_VIP_CONF)
-            template_vip_dummy = j2_env.get_template(self.DUMMY_X_VIP_CONF)
+            if (CONF.controller_worker.loadbalancer_topology ==
+                    consts.TOPOLOGY_ACTIVE_ACTIVE):
+                template_vip_dummy = j2_env.get_template(self.DUMMY_X_VIP_CONF)
+
+        super(Ubuntu, self).write_vip_interface_file(
+            interface_file_path, primary_interface, vip, ip, broadcast,
+            netmask, gateway, mtu, auxiliary_ip, auxiliary_version,
+            render_host_routes, template_vip)
+
         if (CONF.controller_worker.loadbalancer_topology ==
                 consts.TOPOLOGY_ACTIVE_ACTIVE):
-            super(Ubuntu, self).write_vip_interface_file(
-                interface_file_path, primary_interface, vip, ip, broadcast,
-                netmask, gateway, mtu, auxiliary_ip, auxiliary_version,
-                render_host_routes, template_vip)
             dummy_interface_file_path = self.get_dummy_network_interface_file(
                 secondary_interface)
             super(Ubuntu, self).write_vip_interface_file(
                 dummy_interface_file_path, secondary_interface, vip, ip,
                 broadcast, netmask, gateway, mtu, auxiliary_ip,
                 auxiliary_version, render_host_routes, template_vip_dummy)
-        else:
-            super(Ubuntu, self).write_vip_interface_file(
-                interface_file_path, primary_interface, vip, ip, broadcast,
-                netmask, gateway, mtu, auxiliary_ip, auxiliary_version,
-                render_host_routes, template_vip)
 
     def write_port_interface_file(self, netns_interface, fixed_ips, mtu,
                                   interface_file_path=None,
