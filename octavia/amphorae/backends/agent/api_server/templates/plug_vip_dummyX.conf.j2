@@ -18,7 +18,7 @@
 auto {{ interface }}
 {%- for vip in vip_list %}
 iface {{interface}} inet{{ '6' if vip.version == '6' }} static
-address {{vip}}{{'/32' if vip.version=='4' else '/128'}}
+    address {{vip}}{{'/32' if vip.version=='4' else '/128'}}
 {%- endfor %}
 pre-up ip link add {{ interface }} type dummy
 post-down ip link del {{ interface }} type dummy
