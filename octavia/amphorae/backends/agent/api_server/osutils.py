@@ -116,6 +116,7 @@ class BaseOS(object):
                 consts=consts,
                 interface=interface,
                 vip=vip,
+                ip=ip,
                 vip_ipv6=ip.version == 6,
                 # For ipv6 the netmask is already the prefix
                 prefix=(netmask if ip.version == 6
