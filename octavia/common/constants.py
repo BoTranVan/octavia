@@ -485,7 +485,7 @@ FLOW_DOC_TITLES = {'AmphoraFlows': 'Amphora Flows',
                    'L7RuleFlows': 'Layer 7 Rule Flows'}
 
 NETNS_PRIMARY_INTERFACE = 'eth1'
-NETNS_DUMMY_INTERFACE = 'dummy0'
+NETNS_DUMMY_INTERFACE = 'dummy1'
 SYSCTL_CMD = '/sbin/sysctl'
 
 AMP_ACTION_START = 'start'
